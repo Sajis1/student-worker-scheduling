@@ -1,0 +1,204 @@
+.manager-main {
+  max-width: 1000px;
+  margin: 2rem auto;
+  padding: 0 1.25rem;
+}
+
+#calendar-table td {
+  vertical-align: top;
+  min-width: 155px;
+}
+
+.chip {
+  display: block;
+  background: #f4f6fa;
+  border-left: 4px solid #94a3b8;
+  border-radius: 4px;
+  padding: 0.4rem 0.55rem;
+  margin-bottom: 0.4rem;
+  font-size: 0.82rem;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.chip-manual {
+  border-left-color: #d98c00;
+  background: #fff8ea;
+}
+
+.chip-name {
+  font-weight: 600;
+}
+
+.chip-time {
+  color: var(--text-muted);
+}
+
+.chip-reason {
+  color: #8a8a8a;
+  font-style: italic;
+}
+
+.chip-actions {
+  margin-top: 0.3rem;
+  display: flex;
+  gap: 0.75rem;
+}
+
+.chip-actions button {
+  background: none;
+  border: none;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+  font-size: 0.78rem;
+}
+
+.edit-chip-btn {
+  color: var(--brand);
+}
+
+.delete-chip-btn {
+  color: var(--danger);
+}
+
+.chip-legend {
+  display: inline-block;
+  padding: 0.15rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  margin-right: 0.5rem;
+}
+
+.chip-legend-generated {
+  background: #f4f6fa;
+  border-left: 4px solid #94a3b8;
+}
+
+.chip-legend-manual {
+  background: #fff8ea;
+  border-left: 4px solid #d98c00;
+}
+
+.cell-conflict {
+  background: var(--danger-light);
+  outline: 2px solid var(--danger);
+}
+
+#class-schedule-table td {
+  vertical-align: top;
+  min-width: 155px;
+}
+
+.chip-class {
+  background: #eef4ff;
+  border-left-color: #5b7fd9;
+}
+
+#refresh-class-schedule-btn {
+  margin-top: 0.75rem;
+  padding: 0.55rem 1.25rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  background: white;
+  border: 1px solid var(--border);
+  color: var(--text);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+#refresh-class-schedule-btn:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+
+#gaps-panel {
+  margin-top: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: var(--danger-light);
+  border-radius: 6px;
+}
+
+#gaps-panel h3 {
+  margin-top: 0;
+  font-size: 0.9rem;
+  color: var(--danger);
+}
+
+#gaps-list {
+  margin: 0.25rem 0 0;
+  padding-left: 1.25rem;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+#calendar-semester-input {
+  display: inline-block;
+  width: auto;
+  margin-right: 0.5rem;
+}
+
+#refresh-calendar-btn,
+#generate-btn,
+#shift-cancel-btn {
+  margin-top: 0.75rem;
+  padding: 0.55rem 1.25rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+#generate-btn {
+  background: var(--brand);
+  color: white;
+  border: none;
+}
+
+#generate-btn:hover {
+  background: var(--brand-dark);
+}
+
+#refresh-calendar-btn,
+#shift-cancel-btn {
+  background: white;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+#refresh-calendar-btn:hover,
+#shift-cancel-btn:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+
+#time-off-table button {
+  margin-right: 0.5rem;
+  padding: 0.35rem 0.8rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: white;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+#time-off-table button.approve-btn {
+  border-color: var(--success);
+  color: var(--success);
+}
+
+#time-off-table button.approve-btn:hover {
+  background: var(--success-light);
+}
+
+#time-off-table button.deny-btn {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+#time-off-table button.deny-btn:hover {
+  background: var(--danger-light);
+}

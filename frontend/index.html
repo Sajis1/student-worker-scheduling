@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IT Work Schedule - UHD PMO</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <h1>IT Work Schedule</h1>
+    <div id="current-student" class="current-student" hidden>
+      Signed in as <strong id="current-student-name"></strong>
+      <button id="switch-student-btn" type="button" class="link-btn">Not you?</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- Step 1: pick your name. No login system in Phase 1. -->
+    <section id="picker-section" class="card">
+      <h2>Who are you?</h2>
+      <p class="hint">Pick your name from the list below. Only active student workers appear here.</p>
+      <label for="student-select">Student name</label>
+      <select id="student-select">
+        <option value="">Loading students...</option>
+      </select>
+      <button id="continue-btn" type="button" disabled>Continue</button>
+      <p id="picker-error" class="error" hidden></p>
+    </section>
+
+    <!-- Step 2: portal, hidden until a student is picked -->
+    <section id="portal-section" hidden>
+      <nav class="tabs">
+        <button class="tab-btn active" data-tab="class-schedule">Class Schedule</button>
+        <button class="tab-btn" data-tab="time-off">Time Off</button>
+      </nav>
+
+      <section id="tab-class-schedule" class="tab-panel card">
+        <h2 id="class-schedule-form-title">My Class Schedule</h2>
+        <p class="hint">Add every class block. Managers use this to avoid scheduling you to work during class.</p>
+
+        <form id="class-schedule-form">
+          <input type="hidden" id="cs-rowid" />
+
+          <label for="cs-day">Day</label>
+          <select id="cs-day" required>
+            <option value="">Select a day</option>
+            <option>Monday</option>
+            <option>Tuesday</option>
+            <option>Wednesday</option>
+            <option>Thursday</option>
+            <option>Friday</option>
+            <option>Saturday</option>
+            <option>Sunday</option>
+          </select>
+
+          <label for="cs-start">Start time</label>
+          <input id="cs-start" type="time" required />
+
+          <label for="cs-end">End time</label>
+          <input id="cs-end" type="time" required />
+
+          <label for="cs-notes">Course / notes (optional)</label>
+          <input id="cs-notes" type="text" placeholder="e.g. COSC 1436" />
+
+          <label for="cs-semester">Semester</label>
+          <input id="cs-semester" type="text" placeholder="e.g. Fall 2026" />
+
+          <button type="submit" id="cs-submit-btn">Submit</button>
+          <button type="button" id="cs-cancel-btn" hidden>Cancel</button>
+        </form>
+        <p id="class-schedule-status" class="status" hidden></p>
+
+        <h3>Current schedule</h3>
+        <table id="class-schedule-table">
+          <thead>
+            <tr><th>Day</th><th>Start</th><th>End</th><th>Course/Notes</th><th>Semester</th><th>Actions</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </section>
+
+      <section id="tab-time-off" class="tab-panel card" hidden>
+        <h2>Time Off Requests</h2>
+        <form id="time-off-form">
+          <label for="to-start">Start date</label>
+          <input id="to-start" type="date" required />
+
+          <label for="to-end">End date</label>
+          <input id="to-end" type="date" required />
+
+          <label for="to-reason">Reason (optional)</label>
+          <input id="to-reason" type="text" />
+
+          <button type="submit">Submit</button>
+        </form>
+        <p id="time-off-status" class="status" hidden></p>
+
+        <h3>My requests</h3>
+        <table id="time-off-table">
+          <thead>
+            <tr><th>Start</th><th>End</th><th>Reason</th><th>Status</th><th>Submitted</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </section>
+    </section>
+  </main>
+
+  <script src="js/api.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
