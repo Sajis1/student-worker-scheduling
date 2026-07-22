@@ -124,12 +124,37 @@ async function loadCalendar() {
 }
 
 // --- Export to Excel ---
-// Excel opens CSV natively, so this needs no extra library or build step -
-// consistent with the rest of this frontend. A leading BOM tells Excel the
-// file is UTF-8 so accented names/notes don't get garbled on open.
-function csvEscape(value) {
+// Grid layout (students as columns, days as rows) modeled after the PMO's
+// existing hand-kept schedule sheet. Needs real cell styling (header color,
+// merged title, borders) that plain CSV can't do, so this builds an
+// Excel-flavored HTML table instead - Excel opens `.xls`-named HTML directly,
+// no extra library or build step needed, consistent with the rest of this
+// frontend.
+const LOCATION_MARKER = { S701: 'F', TLS: '^', S700: '*', 'Back Office': 'BO' };
+
+function compactTime(text) {
+  const match = String(text || '').trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!match) return text || '';
+  const [, h, m] = match;
+  return m === '00' ? h : `${h}:${m}`;
+}
+
+function htmlEscape(value) {
   const text = value == null ? '' : String(value);
-  return /["\n,]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function weeklyHoursByStudent(rows) {
+  const totals = new Map();
+  rows.forEach((row) => {
+    const start = parseTimeMinutes(row['Start Time']);
+    const end = parseTimeMinutes(row['End Time']);
+    if (start == null || end == null) return;
+    const isLunchDay = row['Start Time'] === '8:00 AM' && row['End Time'] === '5:00 PM';
+    const workedMinutes = end - start - (isLunchDay ? 60 : 0);
+    totals.set(row['Student Name'], (totals.get(row['Student Name']) || 0) + workedMinutes);
+  });
+  return totals;
 }
 
 function exportScheduleToExcel() {
@@ -138,26 +163,70 @@ function exportScheduleToExcel() {
     return;
   }
 
-  const dayOrder = { Monday: 0, Tuesday: 1, Wednesday: 2, Thursday: 3, Friday: 4 };
-  const sortedRows = [...currentWorkScheduleRows].sort((a, b) => {
-    const dayDiff = (dayOrder[a['Day']] ?? 5) - (dayOrder[b['Day']] ?? 5);
-    if (dayDiff !== 0) return dayDiff;
-    const locDiff = (a['Location'] || '').localeCompare(b['Location'] || '');
-    if (locDiff !== 0) return locDiff;
-    return (parseTimeMinutes(a['Start Time']) || 0) - (parseTimeMinutes(b['Start Time']) || 0);
+  const semester = document.getElementById('calendar-semester-input').value.trim() || 'Schedule';
+  const totals = weeklyHoursByStudent(currentWorkScheduleRows);
+  // Same order as the Weekly Hours panel above (most hours first), so the
+  // export reads consistently with what's already on screen.
+  const students = [...totals.entries()].sort((a, b) => b[1] - a[1]).map(([name]) => name);
+
+  const byStudentDay = new Map(); // "name|day" -> [{Location,Start,End}]
+  currentWorkScheduleRows.forEach((row) => {
+    const key = `${row['Student Name']}|${row['Day']}`;
+    if (!byStudentDay.has(key)) byStudentDay.set(key, []);
+    byStudentDay.get(key).push(row);
   });
 
-  const header = ['Student Name', 'Day', 'Location', 'Start Time', 'End Time', 'Semester', 'Source', 'Notes'];
-  const lines = [header.join(',')];
-  sortedRows.forEach((row) => {
-    lines.push(
-      header.map((col) => csvEscape(row[col])).join(',')
-    );
-  });
+  const th = 'style="background:#1F3864;color:#fff;font-weight:bold;text-align:center;border:1px solid #999;padding:4px 8px;"';
+  const dayLabelTd = 'style="background:#D9E1F2;font-weight:bold;text-align:center;border:1px solid #999;padding:4px 8px;"';
+  const cellTd = 'style="text-align:center;border:1px solid #999;padding:4px 8px;white-space:nowrap;"';
+  const totalTd = 'style="background:#D9E1F2;font-weight:bold;text-align:center;border:1px solid #999;padding:4px 8px;"';
+  const spanTd = 'style="border:1px solid #999;padding:4px 8px;"';
 
-  const semester = document.getElementById('calendar-semester-input').value.trim() || 'schedule';
-  const filename = `work-schedule-${semester.replace(/\s+/g, '-')}.csv`;
-  const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+  const titleRow = `<tr><td colspan="${students.length + 1}" style="background:#1F3864;color:#fff;font-weight:bold;text-align:center;font-size:14pt;padding:6px;">PMO Student Worker Schedule &mdash; ${htmlEscape(semester)}</td></tr>`;
+  const headerRow = `<tr><td ${th}></td>${students.map((name) => `<td ${th}>${htmlEscape(name)}</td>`).join('')}</tr>`;
+
+  const dayRows = DAYS.map((day) => {
+    const cells = students
+      .map((name) => {
+        const rows = (byStudentDay.get(`${name}|${day}`) || []).sort(
+          (a, b) => (parseTimeMinutes(a['Start Time']) || 0) - (parseTimeMinutes(b['Start Time']) || 0)
+        );
+        const text = rows
+          .map((row) => {
+            const marker = LOCATION_MARKER[row['Location']] || '';
+            return `${compactTime(row['Start Time'])}-${compactTime(row['End Time'])}${marker ? ' ' + marker : ''}`;
+          })
+          .join('<br>');
+        return `<td ${cellTd}>${text}</td>`;
+      })
+      .join('');
+    return `<tr><td ${dayLabelTd}>${day}</td>${cells}</tr>`;
+  }).join('');
+
+  const hoursRow = `<tr><td ${totalTd}>Hours</td>${students
+    .map((name) => `<td ${totalTd}>${(Math.round((totals.get(name) || 0) / 6) / 10).toFixed(1).replace(/\.0$/, '')} HRS</td>`)
+    .join('')}</tr>`;
+
+  const legendRow = `<tr><td colspan="${students.length + 1}" ${spanTd}>F = S701&nbsp;&nbsp;&nbsp;^ = TLS&nbsp;&nbsp;&nbsp;* = S700&nbsp;&nbsp;&nbsp;BO = Back Office</td></tr>`;
+  const updatedRow = `<tr><td colspan="${students.length + 1}" style="border:1px solid #999;padding:4px 8px;text-align:right;font-style:italic;">Last Updated: ${new Date().toLocaleDateString()}</td></tr>`;
+
+  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+<head><meta charset="UTF-8"></head>
+<body>
+<table style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:11pt;">
+${titleRow}
+${headerRow}
+${dayRows}
+${hoursRow}
+<tr><td colspan="${students.length + 1}" style="border:none;padding:4px;"></td></tr>
+${legendRow}
+${updatedRow}
+</table>
+</body>
+</html>`;
+
+  const filename = `work-schedule-${semester.replace(/\s+/g, '-')}.xls`;
+  const blob = new Blob([html], { type: 'application/vnd.ms-excel' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
