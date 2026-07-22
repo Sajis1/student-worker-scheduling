@@ -51,6 +51,12 @@
       <input id="calendar-semester-input" type="text" value="Fall 2026" />
       <button id="refresh-calendar-btn" type="button">Refresh</button>
       <button id="export-excel-btn" type="button">Export to Excel</button>
+      <button id="copy-excel-btn" type="button">Copy for Excel</button>
+      <p class="hint">
+        If Export to Excel doesn't do anything (common when this dashboard is embedded in a
+        Teams tab), use Copy for Excel instead, then paste (Ctrl+V) into a blank Excel sheet.
+      </p>
+      <p id="export-copy-status" class="status" hidden></p>
 
       <table id="calendar-table">
         <thead>
