@@ -157,11 +157,10 @@ function weeklyHoursByStudent(rows) {
   return totals;
 }
 
-function exportScheduleToExcel() {
-  if (currentWorkScheduleRows.length === 0) {
-    alert('No schedule loaded to export. Load a semester on the calendar above first.');
-    return;
-  }
+// Builds just the <table> markup (shared by the file download and the
+// clipboard-copy fallback below) - returns null if there's nothing to show.
+function buildScheduleTableHtml() {
+  if (currentWorkScheduleRows.length === 0) return null;
 
   const semester = document.getElementById('calendar-semester-input').value.trim() || 'Schedule';
   const totals = weeklyHoursByStudent(currentWorkScheduleRows);
@@ -210,10 +209,9 @@ function exportScheduleToExcel() {
   const legendRow = `<tr><td colspan="${students.length + 1}" ${spanTd}>F = S701&nbsp;&nbsp;&nbsp;^ = TLS&nbsp;&nbsp;&nbsp;* = S700&nbsp;&nbsp;&nbsp;BO = Back Office</td></tr>`;
   const updatedRow = `<tr><td colspan="${students.length + 1}" style="border:1px solid #999;padding:4px 8px;text-align:right;font-style:italic;">Last Updated: ${new Date().toLocaleDateString()}</td></tr>`;
 
-  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-<head><meta charset="UTF-8"></head>
-<body>
-<table style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:11pt;">
+  return {
+    semester,
+    tableHtml: `<table style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:11pt;">
 ${titleRow}
 ${headerRow}
 ${dayRows}
@@ -221,11 +219,25 @@ ${hoursRow}
 <tr><td colspan="${students.length + 1}" style="border:none;padding:4px;"></td></tr>
 ${legendRow}
 ${updatedRow}
-</table>
+</table>`,
+  };
+}
+
+function exportScheduleToExcel() {
+  const built = buildScheduleTableHtml();
+  if (!built) {
+    alert('No schedule loaded to export. Load a semester on the calendar above first.');
+    return;
+  }
+
+  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+<head><meta charset="UTF-8"></head>
+<body>
+${built.tableHtml}
 </body>
 </html>`;
 
-  const filename = `work-schedule-${semester.replace(/\s+/g, '-')}.xls`;
+  const filename = `work-schedule-${built.semester.replace(/\s+/g, '-')}.xls`;
   const blob = new Blob([html], { type: 'application/vnd.ms-excel' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -235,6 +247,54 @@ ${updatedRow}
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
+}
+
+// Fallback for embedded contexts (e.g. a Teams "Website" tab) whose iframe
+// sandbox blocks file downloads outright - confirmed by testing that both
+// the blob-download above AND a real server-side Content-Disposition
+// download get silently blocked with no `allow-downloads` on the sandbox.
+// `document.execCommand('copy')` on a real user-gesture click still works
+// there even though downloads and the modern Clipboard API don't, so this
+// selects an off-screen copy of the same table and copies it as rich HTML -
+// pasting into a blank Excel sheet (Ctrl+V) reconstructs the grid/colors
+// the same way copying any webpage table into Excel normally does.
+function copyScheduleForExcel() {
+  const built = buildScheduleTableHtml();
+  const statusEl = document.getElementById('export-copy-status');
+  if (!built) {
+    alert('No schedule loaded to copy. Load a semester on the calendar above first.');
+    return;
+  }
+
+  const container = document.createElement('div');
+  container.style.position = 'fixed';
+  container.style.left = '-99999px';
+  container.style.top = '0';
+  container.innerHTML = built.tableHtml;
+  document.body.appendChild(container);
+
+  const range = document.createRange();
+  range.selectNode(container);
+  const selection = window.getSelection();
+  selection.removeAllRanges();
+  selection.addRange(range);
+
+  let copied = false;
+  try {
+    copied = document.execCommand('copy');
+  } catch (err) {
+    copied = false;
+  }
+  selection.removeAllRanges();
+  document.body.removeChild(container);
+
+  if (statusEl) {
+    showStatus(
+      statusEl,
+      copied ? 'Copied! Paste into a blank Excel sheet with Ctrl+V.' : 'Copy failed - try Export to Excel instead.',
+      copied ? 'success' : 'error'
+    );
+  }
 }
 
 // --- Weekly hours summary ---
@@ -464,6 +524,7 @@ async function setTimeOffStatus(rowId, status) {
 document.getElementById('generate-btn').addEventListener('click', handleGenerate);
 document.getElementById('refresh-calendar-btn').addEventListener('click', loadCalendar);
 document.getElementById('export-excel-btn').addEventListener('click', exportScheduleToExcel);
+document.getElementById('copy-excel-btn').addEventListener('click', copyScheduleForExcel);
 document.getElementById('refresh-class-schedule-btn').addEventListener('click', loadClassScheduleView);
 document.getElementById('shift-form').addEventListener('submit', handleShiftFormSubmit);
 document.getElementById('shift-cancel-btn').addEventListener('click', resetShiftForm);
