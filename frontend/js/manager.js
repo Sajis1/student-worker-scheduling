@@ -193,16 +193,27 @@ function splitStudentsByRole(students) {
 function buildScheduleTableHtml() {
   if (currentWorkScheduleRows.length === 0) return null;
 
+  // Pulled fresh from the "Viewing semester" field every time this is
+  // built (not cached anywhere) - so the header always reflects whatever
+  // semester is currently on screen, with no separate place to update it.
   const semester = document.getElementById('calendar-semester-input').value.trim() || 'Schedule';
   const totals = weeklyHoursByStudent(currentWorkScheduleRows);
   // Same order as the Weekly Hours panel above (most hours first) within
   // each box, so the export reads consistently with what's already on screen.
   const allStudents = [...totals.entries()].sort((a, b) => b[1] - a[1]).map(([name]) => name);
   const { frontDesk, other } = splitStudentsByRole(allStudents);
-  const groups = [
-    { students: frontDesk, title: `Front Desk — ${semester}` },
-    { students: other, title: `Floater / Back Office — ${semester}` },
-  ].filter((g) => g.students.length > 0);
+  // Keep the two boxes reasonably even rather than strictly by role: if
+  // Front Desk has more than one extra student compared to the other box,
+  // shift its lowest-hours student(s) over until they're within one of
+  // each other - purely a print/layout balance, doesn't change anyone's
+  // actual role or schedule.
+  const byHoursDesc = (a, b) => (totals.get(b) || 0) - (totals.get(a) || 0);
+  while (frontDesk.length - other.length > 1) {
+    other.push(frontDesk.pop()); // frontDesk is hours-descending, so pop() takes its lowest-hours student
+  }
+  frontDesk.sort(byHoursDesc);
+  other.sort(byHoursDesc);
+  const groups = [{ students: frontDesk }, { students: other }].filter((g) => g.students.length > 0);
   if (groups.length === 0) return null;
 
   const byStudentDay = new Map(); // "name|day" -> [{Location,Start,End}]
@@ -225,10 +236,13 @@ function buildScheduleTableHtml() {
   const cellTd = 'style="text-align:center;border:1px solid #999;padding:5px 10px;white-space:nowrap;"';
   const totalTd = 'style="background:#D9E1F2;font-weight:bold;text-align:center;border:1px solid #999;padding:5px 10px;"';
   const spacerTd = '<td style="border:none;background:transparent;width:28px;"></td>';
-  const titleTd = (span, title) =>
-    `<td colspan="${span}" style="background:#1F3864;color:#fff;font-weight:bold;text-align:center;font-size:14pt;padding:8px;">${htmlEscape(title)}</td>`;
 
-  const titleRow = `<tr>${groups.map((g, i) => `${i > 0 ? spacerTd : ''}${titleTd(g.students.length + 1, g.title)}`).join('')}</tr>`;
+  const totalCols = groups.reduce((sum, g) => sum + g.students.length + 1, 0) + (groups.length - 1);
+  // One combined header spanning both boxes, instead of a separate title
+  // per box - the semester comes straight from the field read above, so
+  // changing "Viewing semester" and copying again always relabels this
+  // automatically.
+  const titleRow = `<tr><td colspan="${totalCols}" style="background:#1F3864;color:#fff;font-weight:bold;text-align:center;font-size:14pt;padding:8px;">PMO Student Worker Schedule &mdash; ${htmlEscape(semester)}</td></tr>`;
   const headerRow = `<tr>${groups
     .map((g, i) => `${i > 0 ? spacerTd : ''}<td ${th}></td>${g.students.map((name) => `<td ${th}>${htmlEscape(name)}</td>`).join('')}`)
     .join('')}</tr>`;
@@ -252,7 +266,6 @@ function buildScheduleTableHtml() {
     )
     .join('')}</tr>`;
 
-  const totalCols = groups.reduce((sum, g) => sum + g.students.length + 1, 0) + (groups.length - 1);
   const legendRow = `<tr><td colspan="${totalCols}" style="border:1px solid #999;padding:5px 10px;">F = S701&nbsp;&nbsp;&nbsp;^ = TLS&nbsp;&nbsp;&nbsp;* = S700&nbsp;&nbsp;&nbsp;BO = Back Office</td></tr>`;
   const updatedRow = `<tr><td colspan="${totalCols}" style="border:1px solid #999;padding:5px 10px;text-align:right;font-style:italic;">Last Updated: ${new Date().toLocaleDateString()}</td></tr>`;
 
