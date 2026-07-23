@@ -4,9 +4,50 @@
   padding: 0 1.25rem;
 }
 
+#calendar-table thead th {
+  background: var(--brand-light);
+  border-radius: 6px 6px 0 0;
+}
+
 #calendar-table td {
   vertical-align: top;
   min-width: 155px;
+}
+
+.hours-bar-track {
+  position: relative;
+  height: 20px;
+  background: var(--bg);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.hours-bar-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--brand) 0%, #1f3864 100%);
+  transition: width 0.4s ease;
+}
+
+.hours-bar-label {
+  position: absolute;
+  top: 50%;
+  right: 0.6rem;
+  transform: translateY(-50%);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text);
+  text-shadow: 0 0 4px rgba(255, 255, 255, 0.9), 0 0 4px rgba(255, 255, 255, 0.9);
+}
+
+#weekly-hours-table td:last-child {
+  position: relative;
+  width: 45%;
+  padding-top: 0.35rem;
+  padding-bottom: 0.35rem;
 }
 
 .chip {
@@ -18,6 +59,12 @@
   margin-bottom: 0.4rem;
   font-size: 0.82rem;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.chip:hover {
+  box-shadow: 0 3px 8px rgba(15, 23, 42, 0.1);
+  transform: translateY(-1px);
 }
 
 .chip-manual {
@@ -143,21 +190,23 @@
 #shift-cancel-btn {
   margin-top: 0.75rem;
   padding: 0.55rem 1.25rem;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
   font-size: 0.9rem;
   font-weight: 600;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 #generate-btn {
-  background: var(--brand);
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%);
   color: white;
   border: none;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
 }
 
 #generate-btn:hover {
-  background: var(--brand-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
 }
 
 #refresh-calendar-btn,
@@ -171,6 +220,71 @@
 #shift-cancel-btn:hover {
   border-color: var(--brand);
   color: var(--brand);
+  transform: translateY(-1px);
+}
+
+/* Copy for Excel - styled distinctly (navy, matching the exported sheet's
+   own header color) so it reads as the dashboard's signature action, not
+   just another toolbar button. */
+.btn-copy-excel {
+  margin-top: 0.75rem;
+  margin-left: 0.5rem;
+  padding: 0.6rem 1.4rem;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: white;
+  background: linear-gradient(135deg, #2b4c8c 0%, #1f3864 100%);
+  border: none;
+  box-shadow: 0 3px 10px rgba(31, 56, 100, 0.35);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.btn-copy-excel:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(31, 56, 100, 0.45);
+  background: linear-gradient(135deg, #345a9e 0%, #24406f 100%);
+}
+
+.btn-copy-excel:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(31, 56, 100, 0.35);
+}
+
+/* Small "two overlapping sheets" copy icon, drawn in pure CSS so no icon
+   font/library is needed. */
+.btn-copy-excel-icon {
+  position: relative;
+  width: 13px;
+  height: 13px;
+  display: inline-block;
+}
+
+.btn-copy-excel-icon::before,
+.btn-copy-excel-icon::after {
+  content: '';
+  position: absolute;
+  width: 9px;
+  height: 11px;
+  border: 1.6px solid white;
+  border-radius: 2px;
+}
+
+.btn-copy-excel-icon::before {
+  top: 0;
+  left: 0;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.btn-copy-excel-icon::after {
+  bottom: 0;
+  right: 0;
+  background: #24406f;
 }
 
 #time-off-table button {
