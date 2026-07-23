@@ -5,6 +5,7 @@ const LOCATIONS = ['S700', 'TLS', 'S701', 'Back Office'];
 const SEAT_CAPACITY = { S700: 2, TLS: 1, S701: 1, 'Back Office': Infinity };
 
 let currentWorkScheduleRows = [];
+let currentRoster = []; // [{name, role, primaryLocation, active}] - populated by loadRoster(), reused by the Excel export to split by Role
 
 function to12Hour(time24) {
   if (!time24) return '';
@@ -45,6 +46,7 @@ async function loadRoster() {
   const select = document.getElementById('shift-student');
   try {
     const roster = await api.getStudentsRoster();
+    currentRoster = roster;
     select.innerHTML = '';
     roster
       .filter((s) => s.active)
@@ -123,14 +125,30 @@ async function loadCalendar() {
   renderWeeklyHours();
 }
 
-// --- Export to Excel ---
+// --- Copy for Excel ---
 // Grid layout (students as columns, days as rows) modeled after the PMO's
-// existing hand-kept schedule sheet. Needs real cell styling (header color,
-// merged title, borders) that plain CSV can't do, so this builds an
-// Excel-flavored HTML table instead - Excel opens `.xls`-named HTML directly,
-// no extra library or build step needed, consistent with the rest of this
-// frontend.
+// existing hand-kept schedule sheet, split into two side-by-side boxes -
+// Front Desk in one, Floater/Back Office in the other - same split the PMO
+// already uses on paper. Built as a single (non-nested) table with a blank
+// spacer column between the two groups: Excel reads the pasted HTML as
+// plain adjacent columns, so the two boxes land side by side exactly as
+// laid out here, no nested-table quirks to worry about.
+//
+// There's no file-download version of this anymore: downloads are blocked
+// entirely inside a restrictive iframe sandbox (confirmed by testing - a
+// real server-side Content-Disposition download gets blocked identically
+// to a blob download, with no `allow-downloads` on the sandbox), which is
+// exactly the situation this dashboard runs in when embedded in a Teams
+// tab. `document.execCommand('copy')` on a real user-gesture click still
+// works there even though downloads and the modern Clipboard API don't, so
+// copy-to-clipboard is the one export path that works everywhere this
+// dashboard gets used - a browser tab or an embedded Teams tab alike.
 const LOCATION_MARKER = { S701: 'F', TLS: '^', S700: '*', 'Back Office': 'BO' };
+// Single-quoted font names: the table's own style attribute is double-quoted,
+// so double-quoting these too would prematurely close it and corrupt the
+// markup (caught by testing the actual clipboard HTML, not just the visible
+// rendering, which looked fine despite the broken attribute underneath).
+const EXPORT_FONT_STACK = "'Aptos','Segoe UI',Calibri,Arial,sans-serif";
 
 function compactTime(text) {
   const match = String(text || '').trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
@@ -157,16 +175,35 @@ function weeklyHoursByStudent(rows) {
   return totals;
 }
 
-// Builds just the <table> markup (shared by the file download and the
-// clipboard-copy fallback below) - returns null if there's nothing to show.
+// Front Desk gets its own box; Floater and Back Office share the other one
+// (and anyone with an unrecognized/blank Role falls in there too, rather
+// than silently vanishing from the export).
+function splitStudentsByRole(students) {
+  const roleByName = new Map(currentRoster.map((s) => [s.name, s.role]));
+  const frontDesk = [];
+  const other = [];
+  students.forEach((name) => {
+    (roleByName.get(name) === 'Front Desk' ? frontDesk : other).push(name);
+  });
+  return { frontDesk, other };
+}
+
+// Builds just the <table> markup for the clipboard copy - returns null if
+// there's nothing to show.
 function buildScheduleTableHtml() {
   if (currentWorkScheduleRows.length === 0) return null;
 
   const semester = document.getElementById('calendar-semester-input').value.trim() || 'Schedule';
   const totals = weeklyHoursByStudent(currentWorkScheduleRows);
-  // Same order as the Weekly Hours panel above (most hours first), so the
-  // export reads consistently with what's already on screen.
-  const students = [...totals.entries()].sort((a, b) => b[1] - a[1]).map(([name]) => name);
+  // Same order as the Weekly Hours panel above (most hours first) within
+  // each box, so the export reads consistently with what's already on screen.
+  const allStudents = [...totals.entries()].sort((a, b) => b[1] - a[1]).map(([name]) => name);
+  const { frontDesk, other } = splitStudentsByRole(allStudents);
+  const groups = [
+    { students: frontDesk, title: `Front Desk — ${semester}` },
+    { students: other, title: `Floater / Back Office — ${semester}` },
+  ].filter((g) => g.students.length > 0);
+  if (groups.length === 0) return null;
 
   const byStudentDay = new Map(); // "name|day" -> [{Location,Start,End}]
   currentWorkScheduleRows.forEach((row) => {
@@ -174,94 +211,71 @@ function buildScheduleTableHtml() {
     if (!byStudentDay.has(key)) byStudentDay.set(key, []);
     byStudentDay.get(key).push(row);
   });
-
-  const th = 'style="background:#1F3864;color:#fff;font-weight:bold;text-align:center;border:1px solid #999;padding:4px 8px;"';
-  const dayLabelTd = 'style="background:#D9E1F2;font-weight:bold;text-align:center;border:1px solid #999;padding:4px 8px;"';
-  const cellTd = 'style="text-align:center;border:1px solid #999;padding:4px 8px;white-space:nowrap;"';
-  const totalTd = 'style="background:#D9E1F2;font-weight:bold;text-align:center;border:1px solid #999;padding:4px 8px;"';
-  const spanTd = 'style="border:1px solid #999;padding:4px 8px;"';
-
-  const titleRow = `<tr><td colspan="${students.length + 1}" style="background:#1F3864;color:#fff;font-weight:bold;text-align:center;font-size:14pt;padding:6px;">PMO Student Worker Schedule &mdash; ${htmlEscape(semester)}</td></tr>`;
-  const headerRow = `<tr><td ${th}></td>${students.map((name) => `<td ${th}>${htmlEscape(name)}</td>`).join('')}</tr>`;
-
-  const dayRows = DAYS.map((day) => {
-    const cells = students
-      .map((name) => {
-        const rows = (byStudentDay.get(`${name}|${day}`) || []).sort(
-          (a, b) => (parseTimeMinutes(a['Start Time']) || 0) - (parseTimeMinutes(b['Start Time']) || 0)
-        );
-        const text = rows
-          .map((row) => {
-            const marker = LOCATION_MARKER[row['Location']] || '';
-            return `${compactTime(row['Start Time'])}-${compactTime(row['End Time'])}${marker ? ' ' + marker : ''}`;
-          })
-          .join('<br>');
-        return `<td ${cellTd}>${text}</td>`;
+  const cellFor = (name, day) =>
+    (byStudentDay.get(`${name}|${day}`) || [])
+      .sort((a, b) => (parseTimeMinutes(a['Start Time']) || 0) - (parseTimeMinutes(b['Start Time']) || 0))
+      .map((row) => {
+        const marker = LOCATION_MARKER[row['Location']] || '';
+        return `${compactTime(row['Start Time'])}-${compactTime(row['End Time'])}${marker ? ' ' + marker : ''}`;
       })
-      .join('');
-    return `<tr><td ${dayLabelTd}>${day}</td>${cells}</tr>`;
-  }).join('');
+      .join('<br>');
 
-  const hoursRow = `<tr><td ${totalTd}>Hours</td>${students
-    .map((name) => `<td ${totalTd}>${(Math.round((totals.get(name) || 0) / 6) / 10).toFixed(1).replace(/\.0$/, '')} HRS</td>`)
+  const th = 'style="background:#1F3864;color:#fff;font-weight:bold;text-align:center;border:1px solid #999;padding:5px 10px;"';
+  const dayLabelTd = 'style="background:#D9E1F2;font-weight:bold;text-align:center;border:1px solid #999;padding:5px 10px;"';
+  const cellTd = 'style="text-align:center;border:1px solid #999;padding:5px 10px;white-space:nowrap;"';
+  const totalTd = 'style="background:#D9E1F2;font-weight:bold;text-align:center;border:1px solid #999;padding:5px 10px;"';
+  const spacerTd = '<td style="border:none;background:transparent;width:28px;"></td>';
+  const titleTd = (span, title) =>
+    `<td colspan="${span}" style="background:#1F3864;color:#fff;font-weight:bold;text-align:center;font-size:14pt;padding:8px;">${htmlEscape(title)}</td>`;
+
+  const titleRow = `<tr>${groups.map((g, i) => `${i > 0 ? spacerTd : ''}${titleTd(g.students.length + 1, g.title)}`).join('')}</tr>`;
+  const headerRow = `<tr>${groups
+    .map((g, i) => `${i > 0 ? spacerTd : ''}<td ${th}></td>${g.students.map((name) => `<td ${th}>${htmlEscape(name)}</td>`).join('')}`)
+    .join('')}</tr>`;
+  const dayRows = DAYS.map(
+    (day) =>
+      `<tr>${groups
+        .map(
+          (g, i) =>
+            `${i > 0 ? spacerTd : ''}<td ${dayLabelTd}>${day}</td>${g.students
+              .map((name) => `<td ${cellTd}>${cellFor(name, day)}</td>`)
+              .join('')}`
+        )
+        .join('')}</tr>`
+  ).join('');
+  const hoursRow = `<tr>${groups
+    .map(
+      (g, i) =>
+        `${i > 0 ? spacerTd : ''}<td ${totalTd}>Hours</td>${g.students
+          .map((name) => `<td ${totalTd}>${(Math.round((totals.get(name) || 0) / 6) / 10).toFixed(1).replace(/\.0$/, '')} HRS</td>`)
+          .join('')}`
+    )
     .join('')}</tr>`;
 
-  const legendRow = `<tr><td colspan="${students.length + 1}" ${spanTd}>F = S701&nbsp;&nbsp;&nbsp;^ = TLS&nbsp;&nbsp;&nbsp;* = S700&nbsp;&nbsp;&nbsp;BO = Back Office</td></tr>`;
-  const updatedRow = `<tr><td colspan="${students.length + 1}" style="border:1px solid #999;padding:4px 8px;text-align:right;font-style:italic;">Last Updated: ${new Date().toLocaleDateString()}</td></tr>`;
+  const totalCols = groups.reduce((sum, g) => sum + g.students.length + 1, 0) + (groups.length - 1);
+  const legendRow = `<tr><td colspan="${totalCols}" style="border:1px solid #999;padding:5px 10px;">F = S701&nbsp;&nbsp;&nbsp;^ = TLS&nbsp;&nbsp;&nbsp;* = S700&nbsp;&nbsp;&nbsp;BO = Back Office</td></tr>`;
+  const updatedRow = `<tr><td colspan="${totalCols}" style="border:1px solid #999;padding:5px 10px;text-align:right;font-style:italic;">Last Updated: ${new Date().toLocaleDateString()}</td></tr>`;
 
-  return {
-    semester,
-    tableHtml: `<table style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:11pt;">
+  return `<table style="border-collapse:collapse;font-family:${EXPORT_FONT_STACK};font-size:11pt;">
 ${titleRow}
 ${headerRow}
 ${dayRows}
 ${hoursRow}
-<tr><td colspan="${students.length + 1}" style="border:none;padding:4px;"></td></tr>
+<tr><td colspan="${totalCols}" style="border:none;padding:4px;"></td></tr>
 ${legendRow}
 ${updatedRow}
-</table>`,
-  };
+</table>`;
 }
 
-function exportScheduleToExcel() {
-  const built = buildScheduleTableHtml();
-  if (!built) {
-    alert('No schedule loaded to export. Load a semester on the calendar above first.');
-    return;
-  }
-
-  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-<head><meta charset="UTF-8"></head>
-<body>
-${built.tableHtml}
-</body>
-</html>`;
-
-  const filename = `work-schedule-${built.semester.replace(/\s+/g, '-')}.xls`;
-  const blob = new Blob([html], { type: 'application/vnd.ms-excel' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-}
-
-// Fallback for embedded contexts (e.g. a Teams "Website" tab) whose iframe
-// sandbox blocks file downloads outright - confirmed by testing that both
-// the blob-download above AND a real server-side Content-Disposition
-// download get silently blocked with no `allow-downloads` on the sandbox.
-// `document.execCommand('copy')` on a real user-gesture click still works
-// there even though downloads and the modern Clipboard API don't, so this
-// selects an off-screen copy of the same table and copies it as rich HTML -
-// pasting into a blank Excel sheet (Ctrl+V) reconstructs the grid/colors
-// the same way copying any webpage table into Excel normally does.
+// document.execCommand('copy') on a real user-gesture click works even
+// inside a restrictive iframe sandbox that blocks downloads outright (see
+// note above) - this selects an off-screen copy of the table and copies it
+// as rich HTML, so pasting into a blank Excel sheet (Ctrl+V) reconstructs
+// the grid/colors the same way copying any webpage table into Excel does.
 function copyScheduleForExcel() {
-  const built = buildScheduleTableHtml();
+  const tableHtml = buildScheduleTableHtml();
   const statusEl = document.getElementById('export-copy-status');
-  if (!built) {
+  if (!tableHtml) {
     alert('No schedule loaded to copy. Load a semester on the calendar above first.');
     return;
   }
@@ -270,7 +284,7 @@ function copyScheduleForExcel() {
   container.style.position = 'fixed';
   container.style.left = '-99999px';
   container.style.top = '0';
-  container.innerHTML = built.tableHtml;
+  container.innerHTML = tableHtml;
   document.body.appendChild(container);
 
   const range = document.createRange();
@@ -291,7 +305,7 @@ function copyScheduleForExcel() {
   if (statusEl) {
     showStatus(
       statusEl,
-      copied ? 'Copied! Paste into a blank Excel sheet with Ctrl+V.' : 'Copy failed - try Export to Excel instead.',
+      copied ? 'Copied! Paste into a blank Excel sheet with Ctrl+V.' : 'Copy failed - please try again.',
       copied ? 'success' : 'error'
     );
   }
@@ -320,8 +334,14 @@ function renderWeeklyHours() {
   emptyMsg.hidden = entries.length > 0;
   entries.forEach(([name, minutes]) => {
     const hours = (minutes / 60).toFixed(1);
+    const pct = Math.min(100, (minutes / (20 * 60)) * 100); // 20 hrs/week cap
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${name}</td><td>${hours}</td>`;
+    tr.innerHTML = `
+      <td>${name}</td>
+      <td>
+        <div class="hours-bar-track"><div class="hours-bar-fill" style="width:${pct}%"></div></div>
+        <span class="hours-bar-label">${hours}</span>
+      </td>`;
     tbody.appendChild(tr);
   });
 }
@@ -523,7 +543,6 @@ async function setTimeOffStatus(rowId, status) {
 // --- Init ---
 document.getElementById('generate-btn').addEventListener('click', handleGenerate);
 document.getElementById('refresh-calendar-btn').addEventListener('click', loadCalendar);
-document.getElementById('export-excel-btn').addEventListener('click', exportScheduleToExcel);
 document.getElementById('copy-excel-btn').addEventListener('click', copyScheduleForExcel);
 document.getElementById('refresh-class-schedule-btn').addEventListener('click', loadClassScheduleView);
 document.getElementById('shift-form').addEventListener('submit', handleShiftFormSubmit);
