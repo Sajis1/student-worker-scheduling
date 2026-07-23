@@ -300,3 +300,67 @@ tbody tr:hover {
   background: var(--danger-light);
   color: var(--danger);
 }
+
+/* In-page replacement for window.confirm/alert - see modal.js for why. */
+.app-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.app-modal-box {
+  background: white;
+  border-radius: 10px;
+  padding: 1.5rem;
+  max-width: 22rem;
+  width: 100%;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.25);
+}
+
+.app-modal-message {
+  margin: 0 0 1.25rem;
+  font-size: 0.95rem;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.app-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
+.app-modal-actions button {
+  padding: 0.5rem 1.1rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.app-modal-ok {
+  background: var(--brand);
+  color: white;
+  border: none;
+}
+
+.app-modal-ok:hover {
+  background: var(--brand-dark);
+}
+
+.app-modal-cancel {
+  background: white;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.app-modal-cancel:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+}
