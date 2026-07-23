@@ -105,7 +105,7 @@ async function loadCalendar() {
   try {
     currentWorkScheduleRows = await api.getWorkSchedule(semester);
   } catch (err) {
-    alert(`Could not load the schedule: ${err.message}`);
+    appAlert(`Could not load the schedule: ${err.message}`);
     return;
   }
 
@@ -289,7 +289,7 @@ function copyScheduleForExcel() {
   const tableHtml = buildScheduleTableHtml();
   const statusEl = document.getElementById('export-copy-status');
   if (!tableHtml) {
-    alert('No schedule loaded to copy. Load a semester on the calendar above first.');
+    appAlert('No schedule loaded to copy. Load a semester on the calendar above first.');
     return;
   }
 
@@ -474,12 +474,12 @@ function startEditShift(row) {
 }
 
 async function deleteShift(row) {
-  if (!confirm(`Delete ${row['Student Name']}'s ${row['Day']} ${row['Location']} shift?`)) return;
+  if (!(await appConfirm(`Delete ${row['Student Name']}'s ${row['Day']} ${row['Location']} shift?`))) return;
   try {
     await api.deleteWorkScheduleRow(row.rowId);
     await loadCalendar();
   } catch (err) {
-    alert(`Could not delete shift: ${err.message}`);
+    appAlert(`Could not delete shift: ${err.message}`);
   }
 }
 
@@ -549,7 +549,7 @@ async function setTimeOffStatus(rowId, status) {
     await api.setTimeOffStatus(rowId, status);
     await loadPendingTimeOff();
   } catch (err) {
-    alert(`Could not update request: ${err.message}`);
+    appAlert(`Could not update request: ${err.message}`);
   }
 }
 
