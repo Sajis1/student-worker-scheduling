@@ -164,7 +164,7 @@ function duplicateClass(row) {
 }
 
 async function deleteClassScheduleEntry(rowId) {
-  if (!confirm('Delete this class?')) return;
+  if (!(await appConfirm('Delete this class?'))) return;
   try {
     await api.deleteClassScheduleEntry(rowId);
     showStatus(classScheduleStatus, 'Class deleted.', 'success');
