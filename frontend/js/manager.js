@@ -5,7 +5,7 @@ const LOCATIONS = ['S700', 'TLS', 'S701', 'Back Office'];
 const SEAT_CAPACITY = { S700: 2, TLS: 1, S701: 1, 'Back Office': Infinity };
 
 let currentWorkScheduleRows = [];
-let currentRoster = []; // [{name, role, primaryLocation, active}] - populated by loadRoster(), reused by the Excel export to split by Role
+let currentRoster = []; // [{name, role, primaryLocation, active, maxHours}] - populated by loadRoster(), reused by the Excel export to split by Role
 
 function to12Hour(time24) {
   if (!time24) return '';
@@ -325,20 +325,33 @@ function copyScheduleForExcel() {
 }
 
 // --- Weekly hours summary ---
+// A full 8-5 day includes an unpaid lunch hour - only 8 hours count. Detected
+// from the times themselves (not the Notes text) so this holds for manually
+// added/edited shifts too, not just generator output.
+function workedMinutesForShift(startTime, endTime) {
+  const start = parseTimeMinutes(startTime);
+  const end = parseTimeMinutes(endTime);
+  if (start == null || end == null) return 0;
+  const isLunchDay = startTime === '8:00 AM' && endTime === '5:00 PM';
+  return end - start - (isLunchDay ? 60 : 0);
+}
+
+// Each student's cap comes from their own Max Hours (Student Master),
+// defaulting to 20 when blank/0/non-numeric - same fallback the generator
+// itself uses, so this always reflects the cap that actually applied.
+function capHoursFor(name) {
+  const raw = Number((currentRoster.find((s) => s.name === name) || {}).maxHours);
+  return Number.isFinite(raw) && raw > 0 ? raw : 20;
+}
+
 function renderWeeklyHours() {
   const tbody = document.querySelector('#weekly-hours-table tbody');
   const emptyMsg = document.getElementById('weekly-hours-empty');
   const totals = new Map();
   currentWorkScheduleRows.forEach((row) => {
-    const start = parseTimeMinutes(row['Start Time']);
-    const end = parseTimeMinutes(row['End Time']);
-    if (start == null || end == null) return;
+    const workedMinutes = workedMinutesForShift(row['Start Time'], row['End Time']);
+    if (!workedMinutes) return;
     const name = row['Student Name'];
-    // A full 8-5 day includes an unpaid lunch hour - only 8 hours count.
-    // Detected from the times themselves (not the Notes text) so this holds
-    // for manually added/edited shifts too, not just generator output.
-    const isLunchDay = row['Start Time'] === '8:00 AM' && row['End Time'] === '5:00 PM';
-    const workedMinutes = end - start - (isLunchDay ? 60 : 0);
     totals.set(name, (totals.get(name) || 0) + workedMinutes);
   });
 
@@ -347,13 +360,14 @@ function renderWeeklyHours() {
   emptyMsg.hidden = entries.length > 0;
   entries.forEach(([name, minutes]) => {
     const hours = (minutes / 60).toFixed(1);
-    const pct = Math.min(100, (minutes / (20 * 60)) * 100); // 20 hrs/week cap
+    const capHours = capHoursFor(name);
+    const pct = Math.min(100, (minutes / (capHours * 60)) * 100);
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${name}</td>
       <td>
         <div class="hours-bar-track"><div class="hours-bar-fill" style="width:${pct}%"></div></div>
-        <span class="hours-bar-label">${hours}</span>
+        <span class="hours-bar-label">${hours} / ${capHours}</span>
       </td>`;
     tbody.appendChild(tr);
   });
@@ -496,6 +510,24 @@ async function handleShiftFormSubmit(e) {
     semester: document.getElementById('shift-semester').value,
     notes: document.getElementById('shift-notes').value,
   };
+
+  // Warn (but don't block) if this shift would push the student over their
+  // own weekly cap - manual overrides are allowed to exceed it on purpose
+  // (e.g. covering someone on time off), but the manager should see that
+  // red flag before confirming, not discover it later.
+  const workedMinutes = currentWorkScheduleRows
+    .filter((r) => r['Student Name'] === payload.studentName && r['Semester'] === payload.semester)
+    .filter((r) => !rowId || String(r.rowId) !== String(rowId))
+    .reduce((sum, r) => sum + workedMinutesForShift(r['Start Time'], r['End Time']), 0);
+  const projectedHours = (workedMinutes + workedMinutesForShift(payload.startTime, payload.endTime)) / 60;
+  const capHours = capHoursFor(payload.studentName);
+  if (projectedHours > capHours) {
+    const proceed = await appConfirm(
+      `⚠ This will put ${payload.studentName} at ${projectedHours.toFixed(1)} hrs this week - over their ${capHours} hr cap. Add it anyway?`,
+      'warning'
+    );
+    if (!proceed) return;
+  }
 
   try {
     if (rowId) {

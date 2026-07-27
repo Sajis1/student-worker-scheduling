@@ -46,6 +46,7 @@ router.post('/generate', async (req, res) => {
         name: row['Student Name'],
         role: row['Role'],
         primaryLocation: row['Primary Location'],
+        maxHours: row['Max Hours'],
       }))
       .filter((student) => student.name);
 

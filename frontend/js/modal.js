@@ -17,12 +17,12 @@ function ensureModalRoot() {
   return root;
 }
 
-function showModal(message, showCancel) {
+function showModal(message, showCancel, variant) {
   return new Promise((resolve) => {
     const root = ensureModalRoot();
     root.innerHTML = `
       <div class="app-modal-overlay">
-        <div class="app-modal-box" role="alertdialog" aria-modal="true">
+        <div class="app-modal-box${variant ? ` app-modal-${variant}` : ''}" role="alertdialog" aria-modal="true">
           <p class="app-modal-message"></p>
           <div class="app-modal-actions">
             ${showCancel ? '<button type="button" class="app-modal-cancel">Cancel</button>' : ''}
@@ -52,8 +52,8 @@ function showModal(message, showCancel) {
   });
 }
 
-function appConfirm(message) {
-  return showModal(message, true);
+function appConfirm(message, variant) {
+  return showModal(message, true, variant);
 }
 
 function appAlert(message) {

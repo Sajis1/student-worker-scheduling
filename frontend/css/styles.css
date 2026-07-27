@@ -329,6 +329,15 @@ tbody tr:hover {
   line-height: 1.5;
 }
 
+.app-modal-warning {
+  border-left: 4px solid var(--danger);
+}
+
+.app-modal-warning .app-modal-message {
+  color: var(--danger);
+  font-weight: 600;
+}
+
 .app-modal-actions {
   display: flex;
   justify-content: flex-end;

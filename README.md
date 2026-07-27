@@ -58,6 +58,7 @@ are shown to students.
 | Supervisor     | Text/Number     | Manager's name.                         |
 | Role           | Dropdown        | "Front Desk", "Back Office", or "Floater". Which pool this student belongs to for scheduling (Phase 2) — see "Floater" note below. |
 | Primary Location | Dropdown      | "S700", "TLS", or "S701". This student's default/home seat. Blank for Back Office students — they don't have one until the coverage rules flex them to S701. |
+| Max Hours      | Text/Number     | This student's individual weekly hour cap for the generator. Blank/0/non-numeric defaults to 20. Managers raise this per student (budget allows up to 35/week) when there's extra room — e.g. other students on approved time off — instead of everyone sharing one fixed 20-hour cap. |
 
 ### 2. Class Schedule
 
@@ -144,8 +145,11 @@ floor. This never applies to S701 or Back Office; those gaps are still just
 reported. A short shift like this is tagged in Notes with "short shift:
 only way to close a full coverage day" so it's obvious at a glance on the
 dashboard.
-**Maximum 20 hours per student per week** (hard cap, enforced across the whole
-week, not per day).
+**Maximum 20 hours per student per week by default** (hard cap, enforced
+across the whole week, not per day) — **overridable per student via the
+`Max Hours` column on Student Master** (e.g. up to 35, budget permitting).
+Blank/0/non-numeric falls back to 20. This is a per-student cap, not a
+roster-wide one: raising one student's cap never affects anyone else's.
 **One continuous shift per day per student** — a student is never split into two
 separate blocks on the same day (e.g. clocking in for a morning block, leaving,
 then coming back for a separate afternoon block). Once a student is assigned
@@ -341,9 +345,12 @@ network access. Time is represented in minutes-since-midnight.
   8:00 AM-4:00 PM) does *not* get this treatment. The manager dashboard's
   Weekly Hours summary applies the same 60-minute deduction client-side by
   checking each row's Notes for "unpaid lunch."
-- **A running weekly-minutes total per student caps every pick at 20 hours
-  (1200 minutes) total**, persisted across the whole Monday–Friday loop.
-  Once their budget hits zero they're excluded from every remaining day.
+- **A running weekly-minutes total per student caps every pick at that
+  student's own weekly cap** (`Max Hours` from Student Master, in minutes;
+  20 hours/1200 minutes if blank/0/non-numeric), persisted across the whole
+  Monday–Friday loop. Once their budget hits zero they're excluded from every
+  remaining day. The cap is looked up per student, so raising one student's
+  `Max Hours` to 35 has no effect on anyone else's 20-hour default.
   **The cap-truncation math (`budgetCappedEnd`) is lunch-aware**: a full
   8 AM–5 PM day only actually *costs* 480 worked minutes against the cap
   (thanks to the unpaid-lunch deduction), even though it spans 540 raw

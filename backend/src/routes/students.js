@@ -37,6 +37,7 @@ router.get('/roster', async (req, res) => {
         active: row['Active'] === true,
         role: row['Role'],
         primaryLocation: row['Primary Location'],
+        maxHours: row['Max Hours'],
       }))
       .filter((student) => student.name);
     res.json(roster);

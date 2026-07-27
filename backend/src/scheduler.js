@@ -8,7 +8,7 @@ const OFFICE_END = 1020; // 5:00 PM
 const LUNCH_START = 720; // 12:00 PM
 const LUNCH_END = 780; // 1:00 PM
 const MIN_SHIFT_MINUTES = 240; // 4 hours - a hard constraint, no shift is ever assigned shorter than this
-const WEEKLY_CAP_MINUTES = 1200; // 20 hours/week, a hard constraint
+const WEEKLY_CAP_MINUTES = 1200; // 20 hours/week - default cap, used when a student has no valid Max Hours override
 const CLASS_BUFFER_MINUTES = 30; // small break before/after class, so a shift never starts the instant class ends or ends the instant class starts
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
@@ -41,6 +41,15 @@ function budgetCappedEnd(overlap, remainingBudget) {
     return overlap.end;
   }
   return Math.min(overlap.end, overlap.start + remainingBudget);
+}
+
+// Student Master's Max Hours column overrides the default 20-hour weekly cap
+// per student (e.g. up to 35, budget permitting). Blank/0/non-numeric falls
+// back to the default - this is what lets most students stay at 20 while a
+// manager raises just one or two.
+function resolveMaxWeeklyMinutes(maxHours) {
+  const hours = Number(maxHours);
+  return Number.isFinite(hours) && hours > 0 ? hours * 60 : WEEKLY_CAP_MINUTES;
 }
 
 function parseTimeToMinutes(text) {
@@ -204,7 +213,7 @@ function fillSeatFromPool(
   allowShortShift = false,
   maximizeUnderutilized = false
 ) {
-  const { day, getAvailability, consume, usedToday, weeklyMinutes, daysWorked, generatedRows } = ctx;
+  const { day, getAvailability, consume, usedToday, weeklyMinutes, daysWorked, generatedRows, maxWeeklyMinutesByStudent } = ctx;
   let progressed = true;
   while (progressed) {
     progressed = false;
@@ -213,8 +222,9 @@ function fillSeatFromPool(
       let bestScore = -Infinity;
       for (const student of pool) {
         if (usedToday.has(student.name)) continue; // one shift per day
-        const remainingBudget = WEEKLY_CAP_MINUTES - (weeklyMinutes.get(student.name) || 0);
-        if (remainingBudget <= 0) continue; // 20-hour weekly cap reached
+        const weeklyCap = maxWeeklyMinutesByStudent.get(student.name) ?? WEEKLY_CAP_MINUTES;
+        const remainingBudget = weeklyCap - (weeklyMinutes.get(student.name) || 0);
+        if (remainingBudget <= 0) continue; // this student's own weekly cap reached
         for (const iv of getAvailability(student)) {
           const overlap = intersect(iv, gapWindow);
           if (!overlap) continue;
@@ -281,7 +291,8 @@ function fillSeatFromPool(
 // hours in the first 2-3 days and vanish for the rest of the week even
 // though they were still available.
 function backOfficeDailyBudget(studentName, ctx) {
-  const remainingBudget = WEEKLY_CAP_MINUTES - (ctx.weeklyMinutes.get(studentName) || 0);
+  const weeklyCap = ctx.maxWeeklyMinutesByStudent.get(studentName) ?? WEEKLY_CAP_MINUTES;
+  const remainingBudget = weeklyCap - (ctx.weeklyMinutes.get(studentName) || 0);
   if (remainingBudget <= 0) return 0;
   const fairShare = Math.ceil(remainingBudget / ctx.daysRemaining);
   return Math.min(remainingBudget, Math.max(MIN_SHIFT_MINUTES, fairShare));
@@ -324,7 +335,9 @@ function assignBackOfficeIndependently(pool, ctx) {
   return assignedIntervals;
 }
 
-// students: [{ name, role: 'Front Desk'|'Back Office'|'Floater', primaryLocation }]
+// students: [{ name, role: 'Front Desk'|'Back Office'|'Floater', primaryLocation, maxHours }]
+//   maxHours is this student's own weekly cap override (Student Master's Max
+//   Hours column); blank/0/non-numeric falls back to the 20-hour default.
 //   Caller is expected to have already filtered to Active students. Floaters
 //   are cross-trained for both areas: they default to Back Office duty but
 //   can flex to any Front Desk seat (including S701, unlike regular Back
@@ -357,10 +370,17 @@ function generateWeeklySchedule({ students, classRows, timeOffRows, manualRows, 
   }
 
   // Both persist across the whole week (not reset per day) - this is what
-  // makes the 20-hour cap actually weekly, and the day-spread preference
-  // actually week-aware.
+  // makes each student's weekly cap actually weekly, and the day-spread
+  // preference actually week-aware.
   const weeklyMinutes = new Map();
   const daysWorked = new Map();
+
+  // Per-student weekly cap, resolved once up front from Max Hours (default
+  // 20 hrs/1200 min) - looked up by name everywhere the old flat
+  // WEEKLY_CAP_MINUTES constant used to be read directly.
+  const maxWeeklyMinutesByStudent = new Map(
+    students.map((s) => [s.name, resolveMaxWeeklyMinutes(s.maxHours)])
+  );
 
   // Manual rows are pre-existing commitments the generator didn't create,
   // but their hours still count against the same 20-hour weekly cap and
@@ -428,7 +448,17 @@ function generateWeeklySchedule({ students, classRows, timeOffRows, manualRows, 
     const backOfficeManual = (manualBySeat.get('Back Office') || new Map()).get(day) || [];
 
     perDay.set(day, {
-      ctx: { day, daysRemaining, getAvailability, consume, usedToday, weeklyMinutes, daysWorked, generatedRows },
+      ctx: {
+        day,
+        daysRemaining,
+        getAvailability,
+        consume,
+        usedToday,
+        weeklyMinutes,
+        daysWorked,
+        generatedRows,
+        maxWeeklyMinutesByStudent,
+      },
       // S700 physically has 2 seats. This required instance guarantees the
       // FIRST one is always covered 8-5; the second is filled separately,
       // after everything else, purely as bonus capacity to help
