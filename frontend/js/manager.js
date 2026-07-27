@@ -285,7 +285,15 @@ function buildScheduleTableHtml() {
     return row ? row['Expected Grad'] : '';
   };
 
-  const titleRow = `<tr><td colspan="${totalCols}" style="background:#1F3864;color:#fff;font-weight:bold;text-align:center;font-size:14pt;padding:8px;">PMO Student Worker Schedule &mdash; ${htmlEscape(semester)}</td></tr>`;
+  // Each box gets its own title bar (not one bar spanning the gap between
+  // them) - same per-group-colspan pattern as the contact/supervisor rows,
+  // so the two boxes read as genuinely separate, not one connected table.
+  const titleRow = `<tr>${groups
+    .map((g, i) => {
+      const groupColspan = g.students.length + 1;
+      return `${i > 0 ? spacerTd : ''}<td colspan="${groupColspan}" style="background:#1F3864;color:#fff;font-weight:bold;text-align:center;font-size:14pt;padding:8px;">PMO Student Worker Schedule &mdash; ${htmlEscape(semester)}</td>`;
+    })
+    .join('')}</tr>`;
   const headerRow = `<tr>${groups
     .map((g, i) => `${i > 0 ? spacerTd : ''}<td ${th}></td>${g.students.map((name) => `<td ${th}>${htmlEscape(name)}</td>`).join('')}`)
     .join('')}</tr>`;
@@ -343,7 +351,14 @@ function buildScheduleTableHtml() {
       .join('')}</tr>`
   ).join('');
 
-  const legendRow = `<tr><td colspan="${totalCols}" style="border:1px solid #999;padding:5px 10px;">* = S701&nbsp;&nbsp;&nbsp;^ = TLS&nbsp;&nbsp;&nbsp;F = S700&nbsp;&nbsp;&nbsp;BO = Back Office</td></tr>`;
+  // Same legend text repeated under each box separately, not one row
+  // spanning the gap between them - same reasoning as the title bar above.
+  const legendRow = `<tr>${groups
+    .map((g, i) => {
+      const groupColspan = g.students.length + 1;
+      return `${i > 0 ? spacerTd : ''}<td colspan="${groupColspan}" style="border:1px solid #999;padding:5px 10px;">* = S701&nbsp;&nbsp;&nbsp;^ = TLS&nbsp;&nbsp;&nbsp;F = S700&nbsp;&nbsp;&nbsp;BO = Back Office</td>`;
+    })
+    .join('')}</tr>`;
 
   // Same shared contact list (Supervisors sheet) repeated under both boxes,
   // matching the reference card - not per-student data, so every group's
