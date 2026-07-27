@@ -475,11 +475,11 @@ const SEMESTER_TERMS = [
   { name: 'Winter', startMonth: 11 },
 ];
 
-// Only the current term onward, looking two years ahead so the list never
-// runs dry near a year boundary. A term counts as "not yet passed" as long
-// as the next term in the sequence hasn't started yet - so today (July 2026,
-// mid-Summer II) yields ["Summer II 2026", "Fall 2026", "Winter 2026",
-// "Spring 2027", ...], with Spring/Summer I 2026 already excluded.
+// The current term plus the next 2 (3 total), looking up to two years ahead
+// so the window never runs dry near a year boundary. A term counts as "not
+// yet passed" as long as the next term in the sequence hasn't started yet -
+// so today (July 2026, mid-Summer II) yields ["Summer II 2026", "Fall 2026",
+// "Winter 2026"], with Spring/Summer I 2026 already excluded.
 function currentSemesterOptions() {
   const now = new Date();
   const todayKey = now.getFullYear() * 12 + now.getMonth();
@@ -492,11 +492,14 @@ function currentSemesterOptions() {
       if (nextKey > todayKey) options.push({ key, label: `${term.name} ${year}` });
     });
   }
-  return options.sort((a, b) => a.key - b.key).map((o) => o.label);
+  return options
+    .sort((a, b) => a.key - b.key)
+    .slice(0, 3)
+    .map((o) => o.label);
 }
 
 // Rebuilds the semester dropdown's options and selects selectedValue. If
-// selectedValue isn't one of the current year's three (e.g. editing an older
+// selectedValue isn't one of the upcoming three (e.g. editing an older
 // shift from a past/future semester), it's added as an extra option so it
 // displays correctly instead of silently landing on the wrong semester.
 function fillSemesterSelect(selectEl, selectedValue) {
