@@ -128,32 +128,48 @@ async function refreshClassSchedule() {
   }
 }
 
-// Spring/Summer/Fall for the current calendar year, e.g. today in July 2026
-// gives ["Spring 2026", "Summer 2026", "Fall 2026"] - read fresh each time
-// so the dropdown never goes stale across a year boundary.
+// UHD's five terms in chronological order within a year, with the calendar
+// month (0-11) each one starts. Winter starts in December and is labeled
+// with the year it starts in, same convention "Fall 2026" already uses
+// spanning into December.
+const SEMESTER_TERMS = [
+  { name: 'Spring', startMonth: 0 },
+  { name: 'Summer I', startMonth: 5 },
+  { name: 'Summer II', startMonth: 6 },
+  { name: 'Fall', startMonth: 8 },
+  { name: 'Winter', startMonth: 11 },
+];
+
+// Only the current term onward, looking two years ahead so the list never
+// runs dry near a year boundary. A term counts as "not yet passed" as long
+// as the next term in the sequence hasn't started yet - so today (July 2026,
+// mid-Summer II) yields ["Summer II 2026", "Fall 2026", "Winter 2026",
+// "Spring 2027", ...], with Spring/Summer I 2026 already excluded.
 function currentSemesterOptions() {
-  const year = new Date().getFullYear();
-  return ['Spring', 'Summer', 'Fall'].map((season) => `${season} ${year}`);
+  const now = new Date();
+  const todayKey = now.getFullYear() * 12 + now.getMonth();
+  const options = [];
+  for (const year of [now.getFullYear(), now.getFullYear() + 1]) {
+    SEMESTER_TERMS.forEach((term, i) => {
+      const key = year * 12 + term.startMonth;
+      const next = SEMESTER_TERMS[i + 1];
+      const nextKey = next ? year * 12 + next.startMonth : (year + 1) * 12 + SEMESTER_TERMS[0].startMonth;
+      if (nextKey > todayKey) options.push({ key, label: `${term.name} ${year}` });
+    });
+  }
+  return options.sort((a, b) => a.key - b.key).map((o) => o.label);
 }
 
-// Jan-May -> Spring, Jun-Aug -> Summer, Sep-Dec -> Fall - used to default a
-// new class's semester to whichever one a student is most likely submitting
-// for right now, instead of leaving it on an arbitrary first option.
-function guessCurrentSemester() {
-  const month = new Date().getMonth();
-  const season = month <= 4 ? 'Spring' : month <= 7 ? 'Summer' : 'Fall';
-  return `${season} ${new Date().getFullYear()}`;
-}
-
-// Rebuilds the semester dropdown's options and selects selectedValue. If
-// selectedValue isn't one of the current year's three (e.g. editing an older
-// entry from a past/future semester), it's added as an extra option so it
-// displays correctly instead of silently landing on the wrong semester.
+// Rebuilds the semester dropdown's options and selects selectedValue, or the
+// current term if none given. If selectedValue isn't one of the upcoming
+// options (e.g. editing an older entry from an already-passed semester),
+// it's added as an extra option so it displays correctly instead of
+// silently landing on the wrong semester.
 function fillSemesterSelect(selectEl, selectedValue) {
   const options = currentSemesterOptions();
   if (selectedValue && !options.includes(selectedValue)) options.unshift(selectedValue);
   selectEl.innerHTML = options.map((s) => `<option value="${s}">${s}</option>`).join('');
-  selectEl.value = selectedValue || guessCurrentSemester();
+  selectEl.value = selectedValue || options[0];
 }
 
 function resetClassScheduleForm() {
