@@ -463,13 +463,32 @@ async function handleGenerate() {
 }
 
 // --- Add / Edit shift form ---
+// Spring/Summer/Fall for the current calendar year, e.g. today in July 2026
+// gives ["Spring 2026", "Summer 2026", "Fall 2026"] - read fresh each time
+// so the dropdown never goes stale across a year boundary.
+function currentSemesterOptions() {
+  const year = new Date().getFullYear();
+  return ['Spring', 'Summer', 'Fall'].map((season) => `${season} ${year}`);
+}
+
+// Rebuilds the semester dropdown's options and selects selectedValue. If
+// selectedValue isn't one of the current year's three (e.g. editing an older
+// shift from a past/future semester), it's added as an extra option so it
+// displays correctly instead of silently landing on the wrong semester.
+function fillSemesterSelect(selectEl, selectedValue) {
+  const options = currentSemesterOptions();
+  if (selectedValue && !options.includes(selectedValue)) options.unshift(selectedValue);
+  selectEl.innerHTML = options.map((s) => `<option value="${htmlEscape(s)}">${htmlEscape(s)}</option>`).join('');
+  if (selectedValue) selectEl.value = selectedValue;
+}
+
 function resetShiftForm() {
   document.getElementById('shift-rowid').value = '';
   document.getElementById('shift-form-title').textContent = 'Add Shift (Manual)';
   document.getElementById('shift-submit-btn').textContent = 'Add shift';
   document.getElementById('shift-cancel-btn').hidden = true;
   document.getElementById('shift-form').reset();
-  document.getElementById('shift-semester').value = document.getElementById('calendar-semester-input').value;
+  fillSemesterSelect(document.getElementById('shift-semester'), document.getElementById('calendar-semester-input').value);
 }
 
 function startEditShift(row) {
@@ -482,7 +501,7 @@ function startEditShift(row) {
   document.getElementById('shift-location').value = row['Location'];
   document.getElementById('shift-start').value = to24Hour(row['Start Time']);
   document.getElementById('shift-end').value = to24Hour(row['End Time']);
-  document.getElementById('shift-semester').value = row['Semester'];
+  fillSemesterSelect(document.getElementById('shift-semester'), row['Semester']);
   document.getElementById('shift-notes').value = row['Notes'] || '';
   document.getElementById('shift-form-panel').scrollIntoView({ behavior: 'smooth' });
 }
@@ -593,6 +612,7 @@ document.getElementById('refresh-class-schedule-btn').addEventListener('click', 
 document.getElementById('shift-form').addEventListener('submit', handleShiftFormSubmit);
 document.getElementById('shift-cancel-btn').addEventListener('click', resetShiftForm);
 document.getElementById('asof-input').valueAsDate = new Date();
+fillSemesterSelect(document.getElementById('shift-semester'), document.getElementById('calendar-semester-input').value);
 
 loadRoster();
 loadCalendar();
