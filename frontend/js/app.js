@@ -128,12 +128,41 @@ async function refreshClassSchedule() {
   }
 }
 
+// Spring/Summer/Fall for the current calendar year, e.g. today in July 2026
+// gives ["Spring 2026", "Summer 2026", "Fall 2026"] - read fresh each time
+// so the dropdown never goes stale across a year boundary.
+function currentSemesterOptions() {
+  const year = new Date().getFullYear();
+  return ['Spring', 'Summer', 'Fall'].map((season) => `${season} ${year}`);
+}
+
+// Jan-May -> Spring, Jun-Aug -> Summer, Sep-Dec -> Fall - used to default a
+// new class's semester to whichever one a student is most likely submitting
+// for right now, instead of leaving it on an arbitrary first option.
+function guessCurrentSemester() {
+  const month = new Date().getMonth();
+  const season = month <= 4 ? 'Spring' : month <= 7 ? 'Summer' : 'Fall';
+  return `${season} ${new Date().getFullYear()}`;
+}
+
+// Rebuilds the semester dropdown's options and selects selectedValue. If
+// selectedValue isn't one of the current year's three (e.g. editing an older
+// entry from a past/future semester), it's added as an extra option so it
+// displays correctly instead of silently landing on the wrong semester.
+function fillSemesterSelect(selectEl, selectedValue) {
+  const options = currentSemesterOptions();
+  if (selectedValue && !options.includes(selectedValue)) options.unshift(selectedValue);
+  selectEl.innerHTML = options.map((s) => `<option value="${s}">${s}</option>`).join('');
+  selectEl.value = selectedValue || guessCurrentSemester();
+}
+
 function resetClassScheduleForm() {
   document.getElementById('cs-rowid').value = '';
   document.getElementById('class-schedule-form-title').textContent = 'My Class Schedule';
   document.getElementById('cs-submit-btn').textContent = 'Submit';
   document.getElementById('cs-cancel-btn').hidden = true;
   classScheduleForm.reset();
+  fillSemesterSelect(document.getElementById('cs-semester'));
 }
 
 function startEditClass(row) {
@@ -145,7 +174,7 @@ function startEditClass(row) {
   document.getElementById('cs-start').value = to24Hour(row['Start Time']);
   document.getElementById('cs-end').value = to24Hour(row['End Time']);
   document.getElementById('cs-notes').value = row['Course/Notes'] || '';
-  document.getElementById('cs-semester').value = row['Semester'] || '';
+  fillSemesterSelect(document.getElementById('cs-semester'), row['Semester']);
   classScheduleForm.scrollIntoView({ behavior: 'smooth' });
 }
 
@@ -158,7 +187,7 @@ function duplicateClass(row) {
   document.getElementById('cs-start').value = to24Hour(row['Start Time']);
   document.getElementById('cs-end').value = to24Hour(row['End Time']);
   document.getElementById('cs-notes').value = row['Course/Notes'] || '';
-  document.getElementById('cs-semester').value = row['Semester'] || '';
+  fillSemesterSelect(document.getElementById('cs-semester'), row['Semester']);
   showStatus(classScheduleStatus, 'Pick the other day this class meets, then submit.', 'success');
   classScheduleForm.scrollIntoView({ behavior: 'smooth' });
 }
@@ -255,6 +284,7 @@ function showStatus(el, message, kind) {
 }
 
 // --- Init ---
+fillSemesterSelect(document.getElementById('cs-semester'));
 loadStudents();
 const savedName = sessionStorage.getItem(STORAGE_KEY);
 if (savedName) {
