@@ -11,6 +11,8 @@ const currentStudentBanner = document.getElementById('current-student');
 const currentStudentName = document.getElementById('current-student-name');
 const switchStudentBtn = document.getElementById('switch-student-btn');
 
+let currentStudents = []; // [{name, studentId, email}] - populated by loadStudents(), used to look up the signed-in student's email for time-off submissions
+
 function showError(el, message) {
   el.textContent = message;
   el.hidden = false;
@@ -23,6 +25,7 @@ function hideError(el) {
 async function loadStudents() {
   try {
     const students = await api.getStudents();
+    currentStudents = students;
     studentSelect.innerHTML = '<option value="">Select your name</option>';
     students.forEach((student) => {
       const opt = document.createElement('option');
@@ -289,6 +292,10 @@ timeOffForm.addEventListener('submit', async (e) => {
     startDate: document.getElementById('to-start').value,
     endDate: document.getElementById('to-end').value,
     reason: document.getElementById('to-reason').value,
+    // Populates the Email column on Time Off Requests, which the "Time-off
+    // status update" Smartsheet Automation alerts when Status changes -
+    // that's how the submitting student gets notified of approval/denial.
+    email: (currentStudents.find((s) => s.name === studentName) || {}).email || '',
   };
   try {
     await api.submitTimeOff(request);

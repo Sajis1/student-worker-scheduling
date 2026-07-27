@@ -86,6 +86,7 @@ Each row is one class block for one student. A student with 4 classes has 4 rows
 | Reason           | Text/Number | Optional.                                       |
 | Status           | Dropdown    | Pending, Approved, Denied. Defaults to Pending. |
 | Submitted Date   | Date        | Set automatically by the backend on submit.     |
+| Email            | Contact List | Server-set on submit from the student's Student Master email. Feeds the "Time-off status update" Smartsheet Automation (Trigger: Status changes; Action: alert the contact in this cell) - this is how the submitting student gets emailed when a manager approves/denies their request. A separate "Manager Notification" Automation (Trigger: rows are added; Action: alert specific people) covers the other direction - notifying managers of a new request. Both live entirely in Smartsheet, not in this codebase. |
 
 ### 4. Work Schedule
 

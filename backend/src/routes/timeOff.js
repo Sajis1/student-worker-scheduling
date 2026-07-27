@@ -23,7 +23,7 @@ router.get('/', async (req, res) => {
 // approval/denial happens later (manager dashboard in Phase 2/3), not here.
 router.post('/', async (req, res) => {
   try {
-    const { studentName, startDate, endDate, reason } = req.body;
+    const { studentName, startDate, endDate, reason, email } = req.body;
     if (!studentName || !startDate || !endDate) {
       return res
         .status(400)
@@ -37,6 +37,9 @@ router.post('/', async (req, res) => {
       Reason: reason || '',
       Status: 'Pending',
       'Submitted Date': submittedDate,
+      // Feeds the "Time-off status update" Smartsheet Automation, which
+      // alerts whoever's in this column when Status changes.
+      Email: email || '',
     });
     res.status(201).json(row);
   } catch (err) {
