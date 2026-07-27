@@ -305,18 +305,22 @@ function buildScheduleTableHtml() {
         )
         .join('')}</tr>`
   ).join('');
-  // "Grad" row combines each student's weekly hours with their abbreviated
-  // Expected Grad term on a second line (e.g. "30 HRS<br>Spr27") - replaces
-  // the old plain "Hours" row, matching the PMO's hand-kept reference sheet.
+  // Total Hrs and Grad are two separate rows, one value per cell - matches
+  // the rest of the table's one-value-per-cell style instead of stacking
+  // both values in a single cell with a line break.
+  const hoursRow = `<tr>${groups
+    .map(
+      (g, i) =>
+        `${i > 0 ? spacerTd : ''}<td ${totalTd}>Total Hrs</td>${g.students
+          .map((name) => `<td ${totalTd}>${(Math.round((totals.get(name) || 0) / 6) / 10).toFixed(1).replace(/\.0$/, '')}</td>`)
+          .join('')}`
+    )
+    .join('')}</tr>`;
   const gradRow = `<tr>${groups
     .map(
       (g, i) =>
         `${i > 0 ? spacerTd : ''}<td ${totalTd}>Grad</td>${g.students
-          .map((name) => {
-            const hours = (Math.round((totals.get(name) || 0) / 6) / 10).toFixed(1).replace(/\.0$/, '');
-            const grad = abbreviateExpectedGrad(expectedGradFor(name));
-            return `<td ${totalTd}>${hours} HRS${grad ? '<br>' + htmlEscape(grad) : ''}</td>`;
-          })
+          .map((name) => `<td ${totalTd}>${htmlEscape(abbreviateExpectedGrad(expectedGradFor(name)))}</td>`)
           .join('')}`
     )
     .join('')}</tr>`;
@@ -360,6 +364,7 @@ ${titleRow}
 ${headerRow}
 ${extRow}
 ${dayRows}
+${hoursRow}
 ${gradRow}
 <tr><td colspan="${totalCols}" style="border:none;padding:4px;"></td></tr>
 ${contactRows}
