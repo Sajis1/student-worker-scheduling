@@ -6,6 +6,7 @@ const studentsRouter = require('./src/routes/students');
 const classScheduleRouter = require('./src/routes/classSchedule');
 const timeOffRouter = require('./src/routes/timeOff');
 const workScheduleRouter = require('./src/routes/workSchedule');
+const supervisorsRouter = require('./src/routes/supervisors');
 
 const app = express();
 app.use(cors());
@@ -17,6 +18,7 @@ app.use('/api/students', studentsRouter);
 app.use('/api/class-schedule', classScheduleRouter);
 app.use('/api/time-off', timeOffRouter);
 app.use('/api/work-schedule', workScheduleRouter);
+app.use('/api/supervisors', supervisorsRouter);
 
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);

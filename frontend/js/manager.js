@@ -5,7 +5,9 @@ const LOCATIONS = ['S700', 'TLS', 'S701', 'Back Office'];
 const SEAT_CAPACITY = { S700: 2, TLS: 1, S701: 1, 'Back Office': Infinity };
 
 let currentWorkScheduleRows = [];
-let currentRoster = []; // [{name, role, primaryLocation, active, maxHours}] - populated by loadRoster(), reused by the Excel export to split by Role
+let currentRoster = []; // [{name, role, primaryLocation, active, maxHours, extension, phone}] - populated by loadRoster(), reused by the Excel export to split by Role
+let currentSupervisors = []; // [{name, phone}] - populated by loadSupervisors(), shown at the bottom of both Excel export boxes
+let currentClassScheduleRows = []; // raw Class Schedule rows - populated by loadClassScheduleView(), reused by the Excel export to look up Expected Grad
 
 function to12Hour(time24) {
   if (!time24) return '';
@@ -58,6 +60,17 @@ async function loadRoster() {
       });
   } catch (err) {
     select.innerHTML = `<option value="">Could not load roster: ${err.message}</option>`;
+  }
+}
+
+// Shared contact list (Supervisors sheet) shown identically at the bottom of
+// both Excel export boxes - failing silently (empty list) is fine here since
+// it's a bonus contact block, not something that should block the export.
+async function loadSupervisors() {
+  try {
+    currentSupervisors = await api.getSupervisors();
+  } catch (err) {
+    currentSupervisors = [];
   }
 }
 
@@ -143,7 +156,7 @@ async function loadCalendar() {
 // works there even though downloads and the modern Clipboard API don't, so
 // copy-to-clipboard is the one export path that works everywhere this
 // dashboard gets used - a browser tab or an embedded Teams tab alike.
-const LOCATION_MARKER = { S701: 'F', TLS: '^', S700: '*', 'Back Office': 'BO' };
+const LOCATION_MARKER = { S701: '*', TLS: '^', S700: 'F', 'Back Office': 'BO' };
 // Single-quoted font names: the table's own style attribute is double-quoted,
 // so double-quoting these too would prematurely close it and corrupt the
 // markup (caught by testing the actual clipboard HTML, not just the visible
@@ -155,6 +168,24 @@ function compactTime(text) {
   if (!match) return text || '';
   const [, h, m] = match;
   return m === '00' ? h : `${h}:${m}`;
+}
+
+// Compact form for the Grad row, e.g. "Spring 2027" -> "Spr27", "Summer II
+// 2026" -> "Sum26" (both summer sessions collapse to the same "Sum" since
+// the reference card doesn't distinguish I/II here). "Temp" (a temp/
+// undetermined worker) passes through unchanged. Anything that doesn't
+// match a recognized term falls back to the raw typed value rather than
+// hiding it, since a manager's free-typed entry is still useful as-is.
+function abbreviateExpectedGrad(value) {
+  if (!value) return '';
+  const text = String(value).trim();
+  if (/^temp$/i.test(text)) return 'Temp';
+  const match = text.match(/^(Spring|Summer\s*I{1,2}|Summer|Fall|Winter)\s+(\d{4})$/i);
+  if (!match) return text;
+  const [, term, year] = match;
+  const abbrevByTerm = { spring: 'Spr', summer: 'Sum', fall: 'Fall', winter: 'Win' };
+  const termKey = term.toLowerCase().replace(/\s*i{1,2}$/, '').trim();
+  return `${abbrevByTerm[termKey] || term}${year.slice(-2)}`;
 }
 
 function htmlEscape(value) {
@@ -242,9 +273,26 @@ function buildScheduleTableHtml() {
   // per box - the semester comes straight from the field read above, so
   // changing "Viewing semester" and copying again always relabels this
   // automatically.
+  const infoFor = (name) => currentRoster.find((s) => s.name === name) || {};
+  // Expected Grad lives on Class Schedule (students fill it in themselves,
+  // one class block at a time), not Student Master - a student can have
+  // several rows, so this just takes the first non-blank value found.
+  const expectedGradFor = (name) => {
+    const row = currentClassScheduleRows.find((r) => r['Student Name'] === name && r['Expected Grad']);
+    return row ? row['Expected Grad'] : '';
+  };
+
   const titleRow = `<tr><td colspan="${totalCols}" style="background:#1F3864;color:#fff;font-weight:bold;text-align:center;font-size:14pt;padding:8px;">PMO Student Worker Schedule &mdash; ${htmlEscape(semester)}</td></tr>`;
   const headerRow = `<tr>${groups
     .map((g, i) => `${i > 0 ? spacerTd : ''}<td ${th}></td>${g.students.map((name) => `<td ${th}>${htmlEscape(name)}</td>`).join('')}`)
+    .join('')}</tr>`;
+  const extRow = `<tr>${groups
+    .map(
+      (g, i) =>
+        `${i > 0 ? spacerTd : ''}<td ${dayLabelTd}>Ext.</td>${g.students
+          .map((name) => `<td ${cellTd}>${htmlEscape(infoFor(name).extension || '')}</td>`)
+          .join('')}`
+    )
     .join('')}</tr>`;
   const dayRows = DAYS.map(
     (day) =>
@@ -257,25 +305,66 @@ function buildScheduleTableHtml() {
         )
         .join('')}</tr>`
   ).join('');
-  const hoursRow = `<tr>${groups
+  // "Grad" row combines each student's weekly hours with their abbreviated
+  // Expected Grad term on a second line (e.g. "30 HRS<br>Spr27") - replaces
+  // the old plain "Hours" row, matching the PMO's hand-kept reference sheet.
+  const gradRow = `<tr>${groups
     .map(
       (g, i) =>
-        `${i > 0 ? spacerTd : ''}<td ${totalTd}>Hours</td>${g.students
-          .map((name) => `<td ${totalTd}>${(Math.round((totals.get(name) || 0) / 6) / 10).toFixed(1).replace(/\.0$/, '')} HRS</td>`)
+        `${i > 0 ? spacerTd : ''}<td ${totalTd}>Grad</td>${g.students
+          .map((name) => {
+            const hours = (Math.round((totals.get(name) || 0) / 6) / 10).toFixed(1).replace(/\.0$/, '');
+            const grad = abbreviateExpectedGrad(expectedGradFor(name));
+            return `<td ${totalTd}>${hours} HRS${grad ? '<br>' + htmlEscape(grad) : ''}</td>`;
+          })
           .join('')}`
     )
     .join('')}</tr>`;
 
-  const legendRow = `<tr><td colspan="${totalCols}" style="border:1px solid #999;padding:5px 10px;">F = S701&nbsp;&nbsp;&nbsp;^ = TLS&nbsp;&nbsp;&nbsp;* = S700&nbsp;&nbsp;&nbsp;BO = Back Office</td></tr>`;
+  // Per-student contact list, one row per student, each spanning just its
+  // own box's width - boxes with different student counts just end early on
+  // the shorter side rather than needing filler.
+  const maxContactRows = Math.max(0, ...groups.map((g) => g.students.length));
+  const contactRows = Array.from({ length: maxContactRows }, (_, rowIndex) =>
+    `<tr>${groups
+      .map((g, i) => {
+        const groupColspan = g.students.length + 1;
+        const name = g.students[rowIndex];
+        const cellHtml = name ? `${htmlEscape(name)}: ${htmlEscape(infoFor(name).phone || '')}` : '';
+        return `${i > 0 ? spacerTd : ''}<td colspan="${groupColspan}" style="border:1px solid #999;padding:4px 10px;">${cellHtml}</td>`;
+      })
+      .join('')}</tr>`
+  ).join('');
+
+  const legendRow = `<tr><td colspan="${totalCols}" style="border:1px solid #999;padding:5px 10px;">* = S701&nbsp;&nbsp;&nbsp;^ = TLS&nbsp;&nbsp;&nbsp;F = S700&nbsp;&nbsp;&nbsp;BO = Back Office</td></tr>`;
+
+  // Same shared contact list (Supervisors sheet) repeated under both boxes,
+  // matching the reference card - not per-student data, so every group's
+  // cell shows the same supervisor for a given row.
+  const supervisorRows = currentSupervisors
+    .map(
+      (sup) =>
+        `<tr>${groups
+          .map((g, i) => {
+            const groupColspan = g.students.length + 1;
+            return `${i > 0 ? spacerTd : ''}<td colspan="${groupColspan}" style="border:1px solid #999;padding:4px 10px;">${htmlEscape(sup.name)}: ${htmlEscape(sup.phone || '')}</td>`;
+          })
+          .join('')}</tr>`
+    )
+    .join('');
+
   const updatedRow = `<tr><td colspan="${totalCols}" style="border:1px solid #999;padding:5px 10px;text-align:right;font-style:italic;">Last Updated: ${new Date().toLocaleDateString()}</td></tr>`;
 
   return `<table style="border-collapse:collapse;font-family:${EXPORT_FONT_STACK};font-size:11pt;">
 ${titleRow}
 ${headerRow}
+${extRow}
 ${dayRows}
-${hoursRow}
+${gradRow}
 <tr><td colspan="${totalCols}" style="border:none;padding:4px;"></td></tr>
+${contactRows}
 ${legendRow}
+${supervisorRows}
 ${updatedRow}
 </table>`;
 }
@@ -379,6 +468,7 @@ async function loadClassScheduleView() {
   const tbody = document.querySelector('#class-schedule-table tbody');
   try {
     const [roster, classRows] = await Promise.all([api.getStudentsRoster(), api.getAllClassSchedule()]);
+    currentClassScheduleRows = classRows;
     const roleOrder = { 'Front Desk': 0, 'Back Office': 1, Floater: 2 };
     const active = roster
       .filter((s) => s.active)
@@ -642,6 +732,7 @@ document.getElementById('asof-input').valueAsDate = new Date();
 fillSemesterSelect(document.getElementById('shift-semester'), document.getElementById('calendar-semester-input').value);
 
 loadRoster();
+loadSupervisors();
 loadCalendar();
 loadClassScheduleView();
 loadPendingTimeOff();

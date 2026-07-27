@@ -59,6 +59,8 @@ are shown to students.
 | Role           | Dropdown        | "Front Desk", "Back Office", or "Floater". Which pool this student belongs to for scheduling (Phase 2) — see "Floater" note below. |
 | Primary Location | Dropdown      | "S700", "TLS", or "S701". This student's default/home seat. Blank for Back Office students — they don't have one until the coverage rules flex them to S701. |
 | Max Hours      | Text/Number     | This student's individual weekly hour cap for the generator. Blank/0/non-numeric defaults to 20. Managers raise this per student (budget allows up to 35/week) when there's extra room — e.g. other students on approved time off — instead of everyone sharing one fixed 20-hour cap. |
+| Extension      | Text/Number     | Internal phone extension, e.g. `8533`. Shown in the "Ext." row of the manager dashboard's Excel export. |
+| Phone          | Text/Number     | Full contact number, e.g. `518-954-5633`. Shown in the per-student contact list at the bottom of the Excel export. |
 
 ### 2. Class Schedule
 
@@ -72,6 +74,7 @@ Each row is one class block for one student. A student with 4 classes has 4 rows
 | End Time         | Text/Number | e.g. "10:15 AM".                              |
 | Course/Notes     | Text/Number | Optional, e.g. course number.                 |
 | Semester         | Text/Number | e.g. "Fall 2026".                             |
+| Expected Grad    | Text/Number | Optional. Student-filled, e.g. `Spring 2027`, or literally `Temp` for a temp/undetermined worker. Lives here (not Student Master) since students fill it in themselves via the same form as their classes. A student can have several class rows; the manager dashboard's Excel export just takes the first non-blank value it finds. Auto-abbreviated in the export's "Grad" row to e.g. `Spr27`/`Fall26`/`Sum26` (Summer I and Summer II both abbreviate to `Sum`); anything that doesn't match a recognized term/year is shown exactly as typed instead of being hidden. |
 
 ### 3. Time Off Requests
 
@@ -110,6 +113,18 @@ for that seat) so it won't double-book over them. Editing any row via the
 dashboard (`PUT /api/work-schedule/:rowId`) unconditionally sets
 `Source: 'Manual'`, regardless of what it was before — that's the entire
 override mechanism.
+
+### 5. Supervisors
+
+Shared contact list shown at the bottom of the manager dashboard's Excel
+export (identical under both boxes) — separate from Student Master since a
+supervisor isn't necessarily a student-worker row. Add or remove a row here
+whenever a supervisor joins or leaves; no code change needed.
+
+| Column name | Type        | Notes                          |
+|-------------|-------------|----------------------------------|
+| Name        | Text/Number | Primary column.                  |
+| Phone       | Text/Number | e.g. `832-878-3405`.              |
 
 ## Office Coverage Rules (Phase 2 scheduling logic)
 
@@ -435,7 +450,7 @@ network access. Time is represented in minutes-since-midnight.
 
 ### 1. Create the Smartsheet sheets
 
-Create the four sheets above in your Smartsheet account with those exact column
+Create the five sheets above in your Smartsheet account with those exact column
 names. Note each sheet's Sheet ID (Smartsheet: right-click sheet tab or
 File > Properties, or use "Sheet ID" via the app).
 
@@ -458,6 +473,7 @@ STUDENT_MASTER_SHEET_ID=your_sheet_id_here
 CLASS_SCHEDULE_SHEET_ID=your_sheet_id_here
 TIME_OFF_SHEET_ID=your_sheet_id_here
 WORK_SCHEDULE_SHEET_ID=your_sheet_id_here
+SUPERVISORS_SHEET_ID=your_sheet_id_here
 PORT=3001
 ```
 
@@ -506,6 +522,7 @@ with manual edits too, not just freshly generated schedules).
 | POST   | /api/work-schedule     | Manually add one shift (always `Source: 'Manual'`). |
 | PUT    | /api/work-schedule/:rowId | Edit a shift (always forces `Source: 'Manual'`). |
 | DELETE | /api/work-schedule/:rowId | Delete a shift, regardless of Source.     |
+| GET    | /api/supervisors       | Shared supervisor contact list (Name/Phone) — manager dashboard's Excel export only. |
 
 ## What's NOT done yet
 

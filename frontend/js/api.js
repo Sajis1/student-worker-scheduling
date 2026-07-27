@@ -51,6 +51,8 @@ const api = {
 
   getStudentsRoster: () => apiRequest('/api/students/roster'),
 
+  getSupervisors: () => apiRequest('/api/supervisors'),
+
   getWorkSchedule: (semester) =>
     apiRequest(`/api/work-schedule?semester=${encodeURIComponent(semester)}`),
 

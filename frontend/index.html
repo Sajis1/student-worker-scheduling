@@ -66,6 +66,9 @@
           <label for="cs-semester">Semester</label>
           <select id="cs-semester" required></select>
 
+          <label for="cs-grad">Expected graduation (optional)</label>
+          <input id="cs-grad" type="text" placeholder="e.g. Spring 2027, or Temp" />
+
           <button type="submit" id="cs-submit-btn">Submit</button>
           <button type="button" id="cs-cancel-btn" hidden>Cancel</button>
         </form>
@@ -74,7 +77,7 @@
         <h3>Current schedule</h3>
         <table id="class-schedule-table">
           <thead>
-            <tr><th>Day</th><th>Start</th><th>End</th><th>Course/Notes</th><th>Semester</th><th>Actions</th></tr>
+            <tr><th>Day</th><th>Start</th><th>End</th><th>Course/Notes</th><th>Semester</th><th>Expected Grad</th><th>Actions</th></tr>
           </thead>
           <tbody></tbody>
         </table>

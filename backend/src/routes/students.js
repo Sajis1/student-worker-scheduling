@@ -38,6 +38,8 @@ router.get('/roster', async (req, res) => {
         role: row['Role'],
         primaryLocation: row['Primary Location'],
         maxHours: row['Max Hours'],
+        extension: row['Extension'],
+        phone: row['Phone'],
       }))
       .filter((student) => student.name);
     res.json(roster);

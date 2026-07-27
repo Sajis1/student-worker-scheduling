@@ -22,7 +22,7 @@ router.get('/', async (req, res) => {
 // POST /api/class-schedule -> add one class block for one student.
 router.post('/', async (req, res) => {
   try {
-    const { studentName, day, startTime, endTime, courseNotes, semester } = req.body;
+    const { studentName, day, startTime, endTime, courseNotes, semester, expectedGrad } = req.body;
     if (!studentName || !day || !startTime || !endTime) {
       return res
         .status(400)
@@ -35,6 +35,7 @@ router.post('/', async (req, res) => {
       'End Time': endTime,
       'Course/Notes': courseNotes || '',
       Semester: semester || '',
+      'Expected Grad': expectedGrad || '',
     });
     res.status(201).json(row);
   } catch (err) {
@@ -47,7 +48,7 @@ router.post('/', async (req, res) => {
 // deleting and re-typing it.
 router.put('/:rowId', async (req, res) => {
   try {
-    const { day, startTime, endTime, courseNotes, semester } = req.body;
+    const { day, startTime, endTime, courseNotes, semester, expectedGrad } = req.body;
     if (!day || !startTime || !endTime) {
       return res.status(400).json({ error: 'day, startTime, and endTime are required.' });
     }
@@ -57,6 +58,7 @@ router.put('/:rowId', async (req, res) => {
       'End Time': endTime,
       'Course/Notes': courseNotes || '',
       Semester: semester || '',
+      'Expected Grad': expectedGrad || '',
     });
     res.json(row);
   } catch (err) {

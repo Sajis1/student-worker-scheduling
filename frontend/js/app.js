@@ -112,6 +112,7 @@ async function refreshClassSchedule() {
         <td>${row['End Time'] || ''}</td>
         <td>${row['Course/Notes'] || ''}</td>
         <td>${row['Semester'] || ''}</td>
+        <td>${row['Expected Grad'] || ''}</td>
         <td class="row-actions">
           <button type="button" class="edit-class-btn">Edit</button>
           <button type="button" class="duplicate-class-btn">Duplicate</button>
@@ -194,6 +195,7 @@ function startEditClass(row) {
   document.getElementById('cs-end').value = to24Hour(row['End Time']);
   document.getElementById('cs-notes').value = row['Course/Notes'] || '';
   fillSemesterSelect(document.getElementById('cs-semester'), row['Semester']);
+  document.getElementById('cs-grad').value = row['Expected Grad'] || '';
   classScheduleForm.scrollIntoView({ behavior: 'smooth' });
 }
 
@@ -207,6 +209,7 @@ function duplicateClass(row) {
   document.getElementById('cs-end').value = to24Hour(row['End Time']);
   document.getElementById('cs-notes').value = row['Course/Notes'] || '';
   fillSemesterSelect(document.getElementById('cs-semester'), row['Semester']);
+  document.getElementById('cs-grad').value = row['Expected Grad'] || '';
   showStatus(classScheduleStatus, 'Pick the other day this class meets, then submit.', 'success');
   classScheduleForm.scrollIntoView({ behavior: 'smooth' });
 }
@@ -235,6 +238,7 @@ classScheduleForm.addEventListener('submit', async (e) => {
     endTime: to12Hour(document.getElementById('cs-end').value),
     courseNotes: document.getElementById('cs-notes').value,
     semester: document.getElementById('cs-semester').value,
+    expectedGrad: document.getElementById('cs-grad').value,
   };
   try {
     if (rowId) {
