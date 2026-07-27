@@ -1,6 +1,9 @@
 // No login here either (same accepted Phase 1 tradeoff as the student portal).
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+// Short labels for the Excel export's day column only - the full names in
+// DAYS are still what's used everywhere data is looked up/matched.
+const DAY_LABEL = { Monday: 'Mon', Tuesday: 'Tue', Wednesday: 'Wed', Thursday: 'Thu', Friday: 'Fri' };
 const LOCATIONS = ['S700', 'TLS', 'S701', 'Back Office'];
 const SEAT_CAPACITY = { S700: 2, TLS: 1, S701: 1, 'Back Office': Infinity };
 
@@ -263,7 +266,7 @@ function buildScheduleTableHtml() {
       .join('<br>');
 
   const th = 'style="background:#1F3864;color:#fff;font-weight:bold;text-align:center;border:1px solid #999;padding:5px 10px;"';
-  const dayLabelTd = 'style="background:#D9E1F2;font-weight:bold;text-align:center;border:1px solid #999;padding:5px 10px;"';
+  const dayLabelTd = 'style="background:#D9E1F2;font-weight:bold;text-align:center;border:1px solid #999;padding:5px 10px;white-space:nowrap;"';
   const cellTd = 'style="text-align:center;border:1px solid #999;padding:5px 10px;white-space:nowrap;"';
   const totalTd = 'style="background:#D9E1F2;font-weight:bold;text-align:center;border:1px solid #999;padding:5px 10px;"';
   const spacerTd = '<td style="border:none;background:transparent;width:28px;"></td>';
@@ -299,7 +302,7 @@ function buildScheduleTableHtml() {
       `<tr>${groups
         .map(
           (g, i) =>
-            `${i > 0 ? spacerTd : ''}<td ${dayLabelTd}>${day}</td>${g.students
+            `${i > 0 ? spacerTd : ''}<td ${dayLabelTd}>${DAY_LABEL[day]}</td>${g.students
               .map((name) => `<td ${cellTd}>${cellFor(name, day)}</td>`)
               .join('')}`
         )
