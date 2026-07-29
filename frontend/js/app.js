@@ -113,7 +113,6 @@ async function refreshClassSchedule() {
         <td>${row['Day'] || ''}</td>
         <td>${row['Start Time'] || ''}</td>
         <td>${row['End Time'] || ''}</td>
-        <td>${row['Course/Notes'] || ''}</td>
         <td>${row['Semester'] || ''}</td>
         <td>${row['Expected Grad'] || ''}</td>
         <td class="row-actions">
@@ -196,7 +195,6 @@ function startEditClass(row) {
   document.getElementById('cs-day').value = row['Day'];
   document.getElementById('cs-start').value = to24Hour(row['Start Time']);
   document.getElementById('cs-end').value = to24Hour(row['End Time']);
-  document.getElementById('cs-notes').value = row['Course/Notes'] || '';
   fillSemesterSelect(document.getElementById('cs-semester'), row['Semester']);
   document.getElementById('cs-grad').value = row['Expected Grad'] || '';
   classScheduleForm.scrollIntoView({ behavior: 'smooth' });
@@ -204,13 +202,12 @@ function startEditClass(row) {
 
 // For classes that meet more than once a week: prefill everything from an
 // existing entry (minus the day) so the student only has to pick the other
-// day instead of retyping start/end/notes/semester.
+// day instead of retyping start/end/semester.
 function duplicateClass(row) {
   resetClassScheduleForm();
   document.getElementById('cs-day').value = '';
   document.getElementById('cs-start').value = to24Hour(row['Start Time']);
   document.getElementById('cs-end').value = to24Hour(row['End Time']);
-  document.getElementById('cs-notes').value = row['Course/Notes'] || '';
   fillSemesterSelect(document.getElementById('cs-semester'), row['Semester']);
   document.getElementById('cs-grad').value = row['Expected Grad'] || '';
   showStatus(classScheduleStatus, 'Pick the other day this applies, then submit.', 'success');
@@ -239,7 +236,6 @@ classScheduleForm.addEventListener('submit', async (e) => {
     day: document.getElementById('cs-day').value,
     startTime: to12Hour(document.getElementById('cs-start').value),
     endTime: to12Hour(document.getElementById('cs-end').value),
-    courseNotes: document.getElementById('cs-notes').value,
     semester: document.getElementById('cs-semester').value,
     expectedGrad: document.getElementById('cs-grad').value,
   };

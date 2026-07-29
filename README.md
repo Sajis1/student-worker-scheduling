@@ -65,6 +65,11 @@ are shown to students.
 ### 2. Class Schedule
 
 Each row is one class block for one student. A student with 4 classes has 4 rows.
+Labeled "Unavailable Schedule" in the UI (student portal and manager dashboard) -
+students are only ever asked for day/time, never what the class actually is, for
+privacy. The sheet/column names themselves are unchanged. A `Course/Notes` column
+may still exist here from before this changed - it's no longer read or written by
+the app, so it can be deleted from the sheet whenever convenient.
 
 | Column name     | Type        | Notes                                        |
 |------------------|-------------|-----------------------------------------------|
@@ -72,7 +77,6 @@ Each row is one class block for one student. A student with 4 classes has 4 rows
 | Day              | Dropdown    | Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday |
 | Start Time       | Text/Number | e.g. "09:00 AM". Stored as text in Phase 1.   |
 | End Time         | Text/Number | e.g. "10:15 AM".                              |
-| Course/Notes     | Text/Number | Optional, e.g. course number.                 |
 | Semester         | Text/Number | e.g. "Fall 2026".                             |
 | Expected Grad    | Text/Number | Optional. Student-filled, e.g. `Spring 2027`, or literally `Temp` for a temp/undetermined worker. Lives here (not Student Master) since students fill it in themselves via the same form as their classes. A student can have several class rows; the manager dashboard's Excel export just takes the first non-blank value it finds. Auto-abbreviated in the export's "Grad" row to e.g. `Spr27`/`Fall26`/`Sum26` (Summer I and Summer II both abbreviate to `Sum`); anything that doesn't match a recognized term/year is shown exactly as typed instead of being hidden. |
 

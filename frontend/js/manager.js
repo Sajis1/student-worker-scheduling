@@ -520,7 +520,6 @@ async function loadClassScheduleView() {
           chip.className = 'chip chip-class';
           chip.innerHTML = `
             <div class="chip-time">${row['Start Time'] || ''} - ${row['End Time'] || ''}</div>
-            ${row['Course/Notes'] ? `<div class="chip-reason">${row['Course/Notes']}</div>` : ''}
           `;
           td.appendChild(chip);
         });
