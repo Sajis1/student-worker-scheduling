@@ -530,7 +530,7 @@ async function loadClassScheduleView() {
       tbody.appendChild(tr);
     });
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="6">Could not load class schedule: ${err.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6">Could not load unavailable schedule: ${err.message}</td></tr>`;
   }
 }
 

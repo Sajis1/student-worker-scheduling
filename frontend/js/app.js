@@ -128,7 +128,7 @@ async function refreshClassSchedule() {
       classScheduleTableBody.appendChild(tr);
     });
   } catch (err) {
-    showStatus(classScheduleStatus, `Could not load your class schedule: ${err.message}`, 'error');
+    showStatus(classScheduleStatus, `Could not load your unavailable schedule: ${err.message}`, 'error');
   }
 }
 
@@ -181,7 +181,7 @@ function fillSemesterSelect(selectEl, selectedValue) {
 
 function resetClassScheduleForm() {
   document.getElementById('cs-rowid').value = '';
-  document.getElementById('class-schedule-form-title').textContent = 'My Class Schedule';
+  document.getElementById('class-schedule-form-title').textContent = 'My Unavailable Schedule';
   document.getElementById('cs-submit-btn').textContent = 'Submit';
   document.getElementById('cs-cancel-btn').hidden = true;
   classScheduleForm.reset();
@@ -190,7 +190,7 @@ function resetClassScheduleForm() {
 
 function startEditClass(row) {
   document.getElementById('cs-rowid').value = row.rowId;
-  document.getElementById('class-schedule-form-title').textContent = 'Edit Class';
+  document.getElementById('class-schedule-form-title').textContent = 'Edit Unavailable Time';
   document.getElementById('cs-submit-btn').textContent = 'Save changes';
   document.getElementById('cs-cancel-btn').hidden = false;
   document.getElementById('cs-day').value = row['Day'];
@@ -213,18 +213,18 @@ function duplicateClass(row) {
   document.getElementById('cs-notes').value = row['Course/Notes'] || '';
   fillSemesterSelect(document.getElementById('cs-semester'), row['Semester']);
   document.getElementById('cs-grad').value = row['Expected Grad'] || '';
-  showStatus(classScheduleStatus, 'Pick the other day this class meets, then submit.', 'success');
+  showStatus(classScheduleStatus, 'Pick the other day this applies, then submit.', 'success');
   classScheduleForm.scrollIntoView({ behavior: 'smooth' });
 }
 
 async function deleteClassScheduleEntry(rowId) {
-  if (!(await appConfirm('Delete this class?'))) return;
+  if (!(await appConfirm('Delete this entry?'))) return;
   try {
     await api.deleteClassScheduleEntry(rowId);
-    showStatus(classScheduleStatus, 'Class deleted.', 'success');
+    showStatus(classScheduleStatus, 'Entry deleted.', 'success');
     refreshClassSchedule();
   } catch (err) {
-    showStatus(classScheduleStatus, `Could not delete class: ${err.message}`, 'error');
+    showStatus(classScheduleStatus, `Could not delete entry: ${err.message}`, 'error');
   }
 }
 
@@ -246,15 +246,15 @@ classScheduleForm.addEventListener('submit', async (e) => {
   try {
     if (rowId) {
       await api.updateClassScheduleEntry(rowId, entry);
-      showStatus(classScheduleStatus, 'Class updated.', 'success');
+      showStatus(classScheduleStatus, 'Entry updated.', 'success');
     } else {
       await api.addClassScheduleEntry(entry);
-      showStatus(classScheduleStatus, 'Your class has been submitted.', 'success');
+      showStatus(classScheduleStatus, 'Your unavailable time has been submitted.', 'success');
     }
     resetClassScheduleForm();
     refreshClassSchedule();
   } catch (err) {
-    showStatus(classScheduleStatus, `Could not save class: ${err.message}`, 'error');
+    showStatus(classScheduleStatus, `Could not save entry: ${err.message}`, 'error');
   }
 });
 
