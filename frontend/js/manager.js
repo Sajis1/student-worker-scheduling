@@ -552,6 +552,7 @@ async function handleGenerate() {
   showStatus(statusEl, 'Generating...', 'status');
   gapsPanel.hidden = true;
   showGapsBtn.hidden = true;
+  showGapsBtn.textContent = 'View Uncovered Gaps';
 
   try {
     const result = await api.generateSchedule(semester, asOfDate || undefined);
@@ -750,8 +751,10 @@ async function setTimeOffStatus(rowId, status) {
 
 // --- Init ---
 document.getElementById('generate-btn').addEventListener('click', handleGenerate);
-document.getElementById('show-gaps-btn').addEventListener('click', () => {
-  document.getElementById('gaps-panel').hidden = false;
+document.getElementById('show-gaps-btn').addEventListener('click', (e) => {
+  const gapsPanel = document.getElementById('gaps-panel');
+  gapsPanel.hidden = !gapsPanel.hidden;
+  e.target.textContent = gapsPanel.hidden ? 'View Uncovered Gaps' : 'Collapse Uncovered Gaps';
 });
 document.getElementById('refresh-calendar-btn').addEventListener('click', loadCalendar);
 document.getElementById('copy-excel-btn').addEventListener('click', copyScheduleForExcel);
