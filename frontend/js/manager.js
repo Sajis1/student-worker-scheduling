@@ -540,6 +540,7 @@ async function handleGenerate() {
   const statusEl = document.getElementById('generate-status');
   const gapsPanel = document.getElementById('gaps-panel');
   const gapsList = document.getElementById('gaps-list');
+  const showGapsBtn = document.getElementById('show-gaps-btn');
   const btn = document.getElementById('generate-btn');
 
   if (!semester) {
@@ -550,6 +551,7 @@ async function handleGenerate() {
   btn.disabled = true;
   showStatus(statusEl, 'Generating...', 'status');
   gapsPanel.hidden = true;
+  showGapsBtn.hidden = true;
 
   try {
     const result = await api.generateSchedule(semester, asOfDate || undefined);
@@ -563,7 +565,10 @@ async function handleGenerate() {
       gapsList.innerHTML = result.gaps
         .map((g) => `<li>${g.day} - ${g.location}: ${g.start} - ${g.end} uncovered</li>`)
         .join('');
-      gapsPanel.hidden = false;
+      // Gaps are ready to view, but stay hidden behind the button until the
+      // manager actually asks to see them - Generate's own status message is
+      // enough at a glance, the red box shouldn't force itself on every run.
+      showGapsBtn.hidden = false;
     }
     document.getElementById('calendar-semester-input').value = semester;
     await loadCalendar();
@@ -745,6 +750,9 @@ async function setTimeOffStatus(rowId, status) {
 
 // --- Init ---
 document.getElementById('generate-btn').addEventListener('click', handleGenerate);
+document.getElementById('show-gaps-btn').addEventListener('click', () => {
+  document.getElementById('gaps-panel').hidden = false;
+});
 document.getElementById('refresh-calendar-btn').addEventListener('click', loadCalendar);
 document.getElementById('copy-excel-btn').addEventListener('click', copyScheduleForExcel);
 document.getElementById('refresh-class-schedule-btn').addEventListener('click', loadClassScheduleView);
