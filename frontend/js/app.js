@@ -131,34 +131,34 @@ async function refreshClassSchedule() {
   }
 }
 
-// UHD's five terms in chronological order within a year, with each one's
-// actual first-class-day (month is 0-indexed) per the registrar calendar.
+// UHD's five terms in chronological order within a year, with the calendar
+// month (0-11) each one starts - month-only on purpose, since exact
+// first-class-days shift slightly every year and aren't worth chasing here.
 // Winter starts in December and is labeled with the year it starts in, same
 // convention "Fall 2026" already uses spanning into December.
 const SEMESTER_TERMS = [
-  { name: 'Spring', month: 0, day: 11 }, // Jan 11
-  { name: 'Summer I', month: 5, day: 1 }, // Jun 1
-  { name: 'Summer II', month: 6, day: 6 }, // Jul 6
-  { name: 'Fall', month: 7, day: 17 }, // Aug 17
-  { name: 'Winter', month: 11, day: 18 }, // Dec 18
+  { name: 'Spring', startMonth: 0 }, // January
+  { name: 'Summer I', startMonth: 5 }, // June
+  { name: 'Summer II', startMonth: 6 }, // July
+  { name: 'Fall', startMonth: 7 }, // August
+  { name: 'Winter', startMonth: 11 }, // December
 ];
 
 // The current term plus the next 2 (3 total), looking up to two years ahead
 // so the window never runs dry near a year boundary. A term counts as "not
-// yet passed" as long as the next term's actual first-class-day hasn't
-// arrived yet - so today (July 30, 2026, inside Summer II's Jul 6-Aug 16
-// window) yields ["Summer II 2026", "Fall 2026", "Winter 2026"], with
-// Spring/Summer I 2026 already excluded.
+// yet passed" as long as the next term in the sequence hasn't started yet -
+// so today (July 2026, Summer II) yields ["Summer II 2026", "Fall 2026",
+// "Winter 2026"], with Spring/Summer I 2026 already excluded.
 function currentSemesterOptions() {
-  const today = new Date();
-  const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const now = new Date();
+  const todayKey = now.getFullYear() * 12 + now.getMonth();
   const options = [];
-  for (const year of [today.getFullYear(), today.getFullYear() + 1]) {
+  for (const year of [now.getFullYear(), now.getFullYear() + 1]) {
     SEMESTER_TERMS.forEach((term, i) => {
-      const start = new Date(year, term.month, term.day);
+      const key = year * 12 + term.startMonth;
       const next = SEMESTER_TERMS[i + 1];
-      const nextStart = next ? new Date(year, next.month, next.day) : new Date(year + 1, SEMESTER_TERMS[0].month, SEMESTER_TERMS[0].day);
-      if (nextStart > todayMidnight) options.push({ key: start.getTime(), label: `${term.name} ${year}` });
+      const nextKey = next ? year * 12 + next.startMonth : (year + 1) * 12 + SEMESTER_TERMS[0].startMonth;
+      if (nextKey > todayKey) options.push({ key, label: `${term.name} ${year}` });
     });
   }
   return options
