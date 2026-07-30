@@ -187,6 +187,7 @@
 
 #refresh-calendar-btn,
 #generate-btn,
+#show-gaps-btn,
 #shift-cancel-btn {
   margin-top: 0.75rem;
   padding: 0.55rem 1.25rem;
@@ -197,14 +198,16 @@
   transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-#generate-btn {
+#generate-btn,
+#show-gaps-btn {
   background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%);
   color: white;
   border: none;
   box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
 }
 
-#generate-btn:hover {
+#generate-btn:hover,
+#show-gaps-btn:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
 }
