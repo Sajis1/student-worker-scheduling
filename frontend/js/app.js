@@ -311,9 +311,17 @@ function showStatus(el, message, kind) {
 }
 
 // --- Init ---
-fillSemesterSelect(document.getElementById('cs-semester'));
-loadStudents();
-const savedName = sessionStorage.getItem(STORAGE_KEY);
-if (savedName) {
-  setActiveStudent(savedName);
-}
+// loadStudents() is awaited before auto-restoring a returning student -
+// setActiveStudent() doesn't itself need the roster, but currentStudents
+// must be populated before they could possibly submit a time-off request,
+// otherwise the email lookup silently comes back blank (a returning student
+// never re-picks their name, so there's no other point that would populate
+// it in time).
+(async function init() {
+  fillSemesterSelect(document.getElementById('cs-semester'));
+  await loadStudents();
+  const savedName = sessionStorage.getItem(STORAGE_KEY);
+  if (savedName) {
+    setActiveStudent(savedName);
+  }
+})();
