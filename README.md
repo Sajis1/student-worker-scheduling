@@ -17,8 +17,10 @@ class schedules, time-off requests, and (in later phases) work schedule generati
   Phase 1 (no access to register an app in UHD's tenant). Instead, students pick
   their own name from a dropdown populated from the Student Master sheet, filtered
   to rows where `Active` is checked. This is a known, accepted tradeoff for Phase 1.
-- **Notifications are not sent by the backend.** Phase 3 will use Power Automate
-  watching the Smartsheet `Status` column for changes to trigger emails.
+- **Notifications are not sent by the backend at all — they're pure Smartsheet
+  Automation**, configured directly in the Time Off Requests sheet, not in this
+  codebase. See "Notifications" below.
+- **Deployed and live**, not just local — see "Deployment" below.
 
 ```
 frontend (HTML/CSS/JS) --> backend (Express) --> Smartsheet API
@@ -26,14 +28,19 @@ frontend (HTML/CSS/JS) --> backend (Express) --> Smartsheet API
 
 ## Phases
 
-- **Phase 1 (this scaffold):** architecture, Student Master / Class Schedule /
-  Time Off Requests sheets, student portal (pick name, submit class schedule,
-  submit/view time-off requests).
-- **Phase 2 (next):** manager dashboard, live calendar view, automatic schedule
-  generation. See "Office Coverage Rules" below for the full scheduling logic.
-  Managers can manually override anything the generator produces.
-- **Phase 3:** reports, exports, time-off approval workflow polish, Power
-  Automate email notifications.
+- **Phase 1 (done):** architecture, Student Master / Class Schedule (labeled
+  "Unavailable Schedule" in the UI) / Time Off Requests sheets, student portal
+  (pick name, submit unavailable schedule, submit/view time-off requests).
+- **Phase 2 (done):** manager dashboard, live calendar view, automatic schedule
+  generation (see "Office Coverage Rules" below), manual overrides, Excel
+  export matching the PMO's existing paper format (see "Manager Dashboard
+  Excel Export" below), two-way email notifications on time-off requests (see
+  "Notifications" below), deployed to production on Vercel (see "Deployment"
+  below).
+- **Phase 3 (partially started):** the approval-workflow email notifications
+  planned for this phase are already done (via Smartsheet Automation, not
+  Power Automate as originally planned). Still open: reports/exports beyond
+  the Excel copy, full audit trail on time-off approvals.
 - **Phase 4:** future enhancements (analytics, historical schedules,
   Teams/Outlook integration, AI scheduling suggestions).
 
@@ -77,7 +84,7 @@ the app, so it can be deleted from the sheet whenever convenient.
 | Day              | Dropdown    | Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday |
 | Start Time       | Text/Number | e.g. "09:00 AM". Stored as text in Phase 1.   |
 | End Time         | Text/Number | e.g. "10:15 AM".                              |
-| Semester         | Text/Number | e.g. "Fall 2026".                             |
+| Semester         | Text/Number | e.g. "Fall 2026". Both this field and the Work Schedule form's Semester field are `<select>` dropdowns (not free text) populated by an identical `SEMESTER_TERMS` constant duplicated in both `frontend/js/app.js` and `frontend/js/manager.js` (no shared module system between the two pages, so it's copy-pasted, not imported — keep both in sync if it ever changes). UHD's five terms, month-only precision (exact first-class-days shift slightly every year, not worth chasing): Spring starts January, Summer I June, Summer II July, Fall August, Winter December. The dropdown always shows just the current term plus the next 2, computed fresh from today's date — nothing to update yearly. |
 | Expected Grad    | Text/Number | Optional. Student-filled, e.g. `Spring 2027`, or literally `Temp` for a temp/undetermined worker. Lives here (not Student Master) since students fill it in themselves via the same form as their classes. A student can have several class rows; the manager dashboard's Excel export just takes the first non-blank value it finds. Auto-abbreviated in the export's "Grad" row to e.g. `Spr27`/`Fall26`/`Sum26` (Summer I and Summer II both abbreviate to `Sum`); anything that doesn't match a recognized term/year is shown exactly as typed instead of being hidden. |
 
 ### 3. Time Off Requests
@@ -503,13 +510,51 @@ your backend runs elsewhere).
 
 Also no build step: open `frontend/manager.html` directly in a browser (same
 running backend as the student portal). There's no login/identification here
-either, same accepted tradeoff. Not embedded in SharePoint or hosted anywhere
-beyond localhost yet — both are out of scope for now.
+either, same accepted tradeoff. Not embedded in SharePoint yet — that's still
+out of scope — but it **is** deployed and live, see "Deployment" below.
 
 The dashboard's bottom panel, "Weekly Hours," lists every student's total
 scheduled hours for the semester currently shown on the calendar (computed
 client-side from the same rows the calendar renders, so it's always in sync
 with manual edits too, not just freshly generated schedules).
+
+## Deployment
+
+This is live in production, not just a local dev project.
+
+- **Hosting:** [Vercel](https://vercel.com), project `student-worker-scheduling`
+  under the `Sajis1` account. Live URL:
+  `https://student-worker-scheduling.vercel.app` (root `/` is the student
+  portal; `/manager.html` is the manager dashboard — that's the one embedded
+  as a Teams tab, so always link to `/manager.html` explicitly, not the bare
+  domain).
+- **How it deploys:** [`vercel.json`](vercel.json) at the repo root tells
+  Vercel to run `backend/server.js` as a serverless function (mounted at
+  `/api/*`) and serve `frontend/` as static files. Every push to the GitHub
+  repo's `main` branch (`github.com/Sajis1/student-worker-scheduling`)
+  auto-triggers a new deployment — there's no separate manual deploy step.
+  Normal flow for a new change: `git add` / `git commit` / `git push origin
+  main` from a local clone, same as any other repo. (One quirk from this
+  project's own history: if a machine doesn't have git installed, changes can
+  still be pushed via the GitHub REST API directly — create blobs, a tree, a
+  commit, then fast-forward the `main` ref — but that's a fallback, not the
+  normal path. Installing git is the better fix if you hit this.)
+- **Environment variables live in Vercel, not in this repo.** Project →
+  Settings → Environment Variables. These must match `backend/.env.example`'s
+  keys exactly: `SMARTSHEET_API_TOKEN`, `STUDENT_MASTER_SHEET_ID`,
+  `CLASS_SCHEDULE_SHEET_ID`, `TIME_OFF_SHEET_ID`, `WORK_SCHEDULE_SHEET_ID`,
+  `SUPERVISORS_SHEET_ID`. **Adding or changing a variable does not affect an
+  already-running deployment** — trigger a redeploy afterward (Deployments
+  tab → latest deployment → `...` → Redeploy) for it to take effect.
+- **Caching:** Vercel's CDN caches static assets aggressively. If a pushed
+  change doesn't seem to show up even after a hard refresh, try appending a
+  throwaway query string (`?v=2`) to force a fresh fetch — this has come up
+  more than once during development and isn't a sign anything is actually
+  broken.
+- **A printable one-page overview** of the whole system (features + the
+  scheduling rules, written for a non-technical manager audience) lives at
+  [`PMO-Overview.html`](PMO-Overview.html) in the repo root — open it in a
+  browser and print, or hand it off as-is.
 
 ## Backend API (frontend-facing, not Smartsheet's API)
 
@@ -529,6 +574,72 @@ with manual edits too, not just freshly generated schedules).
 | DELETE | /api/work-schedule/:rowId | Delete a shift, regardless of Source.     |
 | GET    | /api/supervisors       | Shared supervisor contact list (Name/Phone) — manager dashboard's Excel export only. |
 
+## Notifications
+
+Both directions run entirely through **Smartsheet Automation**, configured on
+the Time Off Requests sheet itself (⚡ icon in the Smartsheet toolbar) — none
+of this is backend code, and nothing here needs a code change to modify (edit
+the workflow directly in Smartsheet: `Time Off Requests` → `Manage Automation
+Workflows`).
+
+1. **"Manager Notification"** — Trigger: *When rows are added*. Action:
+   *Alert someone* → fixed recipients (currently Tai Hilaire, Alexis Nwagui).
+   Fires the moment a student submits a new request; message includes all
+   fields via the "Links to sheet and all fields" option, no manual
+   templating needed.
+2. **"Time-off status update"** — Trigger: *When rows are changed AND when
+   'Status' changes*. Action: *Alert someone* → **"Contact(s) in a cell"** →
+   the `Email` column (not fixed people, since it needs to reach a different
+   student each time). Message body includes `{{Status}}` so the email states
+   Approved/Denied. **Automation permissions must be set to "Unrestricted"**
+   (Automation → the "..." menu → Edit → permissions) — the default
+   "Restricted"/"Limited" tiers only notify people already shared on the
+   sheet, which a student never is, so without Unrestricted this workflow
+   silently fails to reach students.
+
+**Why the `Email` column exists at all:** a Smartsheet alert to "contacts in a
+cell" needs that cell to actually hold a real address. `backend/src/routes/
+timeOff.js`'s `POST /api/time-off` writes it on every submission, populated
+from `frontend/js/app.js` looking up the submitting student's email (fetched
+from Student Master for the name picker) — the student never types it
+themselves, and there's no UI for it; it's a plumbing detail that makes
+workflow 2 possible. If a request predates this column existing, its `Email`
+cell is blank and it won't have gotten a status-change alert.
+
+**Not currently possible:** approving/denying a request from inside the email
+itself. Smartsheet's *Alert* action is one-way notification only. The closest
+built-in alternative is swapping the action type to **"Request an Update"**,
+which emails a link to a small web form for updating that row's fields (still
+outside our own dashboard, no code change needed) — considered but not
+implemented, since nobody's asked for it yet.
+
+## Manager Dashboard Excel Export
+
+The "Copy for Excel" button (`frontend/js/manager.js`,
+`buildScheduleTableHtml()`) builds an HTML table matching the PMO's existing
+hand-kept paper schedule, then copies it to the clipboard as rich HTML via
+`document.execCommand('copy')` (works even inside a restrictive iframe
+sandbox — like an embedded Teams tab — where downloads and the modern
+Clipboard API are both blocked). Paste with Ctrl+V into a blank Excel sheet.
+
+Split into two side-by-side boxes (Front Desk in one, Floater/Back Office in
+the other, kept roughly even in size), each with its own copy of everything
+below — nothing spans across the gap between them:
+
+- Its own title bar ("PMO Student Worker Schedule — {semester}")
+- Header row of student names, an `Ext.` row (from Student Master's
+  `Extension` column)
+- Monday–Friday shift rows, using `*` = S701, `^` = TLS, `F` = S700,
+  `BO` = Back Office as location markers (this mapping was reverse-engineered
+  from the PMO's actual paper reference card — don't swap S700/S701's markers
+  back without checking that card again)
+- A `Total Hrs` row and a separate `Grad` row (student's Expected Grad,
+  auto-abbreviated — see the Class Schedule section above)
+- A per-student contact list (`Name: Phone`, from Student Master)
+- The location-marker legend
+- The Supervisors sheet's contact list (same list, repeated under both boxes)
+- A "Last Updated" timestamp
+
 ## What's NOT done yet
 
 - The scheduling algorithm is a greedy heuristic, not a globally-optimal
@@ -539,7 +650,10 @@ with manual edits too, not just freshly generated schedules).
 - No request locking/concurrency control (e.g. two people editing the same
   shift at once is last-write-wins) — same class of tradeoff as the no-auth
   decision.
-- Real hosting and embedding the manager dashboard in SharePoint remain
-  explicitly out of scope — everything still only runs on localhost.
-- Phase 3 (reports/exports, full time-off approval workflow polish with audit
-  trail, Power Automate email notifications) hasn't been started.
+- Embedding the manager dashboard in SharePoint (as opposed to Teams, which
+  already works) remains out of scope.
+- Reports/exports beyond the Excel copy, and a full time-off approval audit
+  trail, haven't been started.
+- One-click approve/deny from inside the notification email isn't possible
+  (see "Notifications" above) — every approval still requires opening the
+  manager dashboard.
