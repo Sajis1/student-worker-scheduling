@@ -371,13 +371,19 @@ network access. Time is represented in minutes-since-midnight.
   Weekly Hours summary applies the same 60-minute deduction client-side by
   checking each row's Notes for "unpaid lunch."
 - **`annotateS700LunchCoverage()` names who's covering an S700 full-8-5
-  person's lunch, in that row's Notes** — e.g. "lunch covered by Bob". S700
+  person's lunch, in that row's Notes** — e.g. "lunch covered by Bob". Only
+  fires on a day where exactly ONE person is at S700 all day (two people can
+  cover each other's lunch, so nothing gets added when there are two). S700
   only (not TLS/S701/Back Office), and purely informational: it runs once,
   after every pass and after `mergeAdjacentRows`, checking that same day's
-  *already-finalized* S701 assignment first, then Back Office, for whoever's
-  actually covering the 12-1 PM window — it never changes who gets scheduled,
-  it just reports whoever the generator already happened to put there. Silent
-  no-op if nobody's covering either seat at that hour that day.
+  *already-finalized* S701 assignment first, then Back Office, for whoever
+  overlaps a flexible **12:00–2:00 PM window** the most (`bestLunchCoverer()`)
+  — it deliberately doesn't require exactly 12–1 PM coverage, since a
+  same-day-alone S700 person and their nearby S701/Back Office backup rarely
+  line up on an exact hour; any real overlap in that window counts, and
+  whichever candidate overlaps it *most* wins if there's more than one row to
+  choose from. Never changes who gets scheduled, purely reports it. Silent
+  no-op if nobody overlaps that window at all that day.
 - **A running weekly-minutes total per student caps every pick at that
   student's own weekly cap** (`Max Hours` from Student Master, in minutes;
   20 hours/1200 minutes if blank/0/non-numeric), persisted across the whole

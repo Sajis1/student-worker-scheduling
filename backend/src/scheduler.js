@@ -598,21 +598,56 @@ function generateWeeklySchedule({ students, classRows, timeOffRows, manualRows, 
   return { generatedRows: finalRows, gaps, warnings };
 }
 
-// For each S700 row that's a full 8-5 day (the one with the mandatory unpaid
-// lunch), names whoever's actually covering their lunch hour in Notes - S701
-// checked first, then Back Office, since those are the two places someone
-// could plausibly step in from. Purely informational: reports whoever the
-// generator already happened to schedule there that day, never changes any
-// assignment. Silently omitted if neither seat has anyone covering that hour.
+const LUNCH_WINDOW_END = LUNCH_START + 120; // 2:00 PM - flexible window: coverage doesn't need to land exactly on 12-1, just be realistically nearby (per manager direction)
+
+// How many minutes of `row` overlap the flexible 12:00-2:00 PM lunch window.
+function overlapMinutesWithLunchWindow(row) {
+  const start = Math.max(row.start, LUNCH_START);
+  const end = Math.min(row.end, LUNCH_WINDOW_END);
+  return Math.max(0, end - start);
+}
+
+// Whoever at `location` on `day` has the MOST overlap with the lunch window
+// (not just the first match) - picks the most plausible actual coverer when
+// a seat has more than one row that day.
+function bestLunchCoverer(rows, day, location) {
+  let best = null;
+  let bestOverlap = 0;
+  for (const r of rows) {
+    if (r.location !== location || r.day !== day) continue;
+    const overlap = overlapMinutesWithLunchWindow(r);
+    if (overlap > bestOverlap) {
+      bestOverlap = overlap;
+      best = r;
+    }
+  }
+  return best;
+}
+
+// For any day where S700 is covered by exactly ONE person for the full 8-5
+// day (the one with the mandatory unpaid lunch), names whoever's covering
+// their lunch in Notes - S701 checked first, then Back Office, since those
+// are the two places someone could plausibly step in from. Two people at
+// S700 that day can cover each other, so no note is added at all then.
+// "Covering" means any overlap with a flexible 12:00-2:00 PM window, not
+// exactly 12-1 - the S701/Back Office person doesn't need to be free that
+// whole hour, just genuinely nearby around lunchtime. Purely informational:
+// reports whoever the generator already happened to schedule, never changes
+// any assignment. Silently omitted if nobody overlaps that window at all.
 function annotateS700LunchCoverage(rows) {
+  const s700FullDayRowsByDay = new Map();
   for (const row of rows) {
     if (row.location !== 'S700' || !isFullOfficeDay(row)) continue;
-    const coversLunch = (r) => r.day === row.day && r.start <= LUNCH_START && r.end >= LUNCH_END;
-    const atS701 = rows.find((r) => r.location === 'S701' && coversLunch(r));
-    const atBackOffice = !atS701 && rows.find((r) => r.location === 'Back Office' && coversLunch(r));
-    const cover = atS701 || atBackOffice;
+    if (!s700FullDayRowsByDay.has(row.day)) s700FullDayRowsByDay.set(row.day, []);
+    s700FullDayRowsByDay.get(row.day).push(row);
+  }
+
+  for (const [day, s700Rows] of s700FullDayRowsByDay) {
+    if (s700Rows.length !== 1) continue; // 2+ people at S700 can cover each other
+    const row = s700Rows[0];
+    const cover = bestLunchCoverer(rows, day, 'S701') || bestLunchCoverer(rows, day, 'Back Office');
     if (!cover) continue;
-    const note = `lunch covered by ${cover.studentName}${atS701 ? '' : ' (Back Office)'}`;
+    const note = `lunch covered by ${cover.studentName}${cover.location === 'S701' ? '' : ' (Back Office)'}`;
     row.reason = [row.reason, note].filter(Boolean).join('; ');
   }
 }
