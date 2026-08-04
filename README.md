@@ -372,6 +372,14 @@ network access. Time is represented in minutes-since-midnight.
   8:00 AM-4:00 PM) does *not* get this treatment. The manager dashboard's
   Weekly Hours summary applies the same 60-minute deduction client-side by
   checking each row's Notes for "unpaid lunch."
+- **`annotateS700LunchCoverage()` names who's covering an S700 full-8-5
+  person's lunch, in that row's Notes** — e.g. "lunch covered by Bob". S700
+  only (not TLS/S701/Back Office), and purely informational: it runs once,
+  after every pass and after `mergeAdjacentRows`, checking that same day's
+  *already-finalized* S701 assignment first, then Back Office, for whoever's
+  actually covering the 12-1 PM window — it never changes who gets scheduled,
+  it just reports whoever the generator already happened to put there. Silent
+  no-op if nobody's covering either seat at that hour that day.
 - **A running weekly-minutes total per student caps every pick at that
   student's own weekly cap** (`Max Hours` from Student Master, in minutes;
   20 hours/1200 minutes if blank/0/non-numeric), persisted across the whole

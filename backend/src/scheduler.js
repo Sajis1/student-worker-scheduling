@@ -628,7 +628,28 @@ function generateWeeklySchedule({ students, classRows, timeOffRows, manualRows, 
     }
   }
 
-  return { generatedRows: mergeAdjacentRows(generatedRows), gaps, warnings };
+  const finalRows = mergeAdjacentRows(generatedRows);
+  annotateS700LunchCoverage(finalRows);
+  return { generatedRows: finalRows, gaps, warnings };
+}
+
+// For each S700 row that's a full 8-5 day (the one with the mandatory unpaid
+// lunch), names whoever's actually covering their lunch hour in Notes - S701
+// checked first, then Back Office, since those are the two places someone
+// could plausibly step in from. Purely informational: reports whoever the
+// generator already happened to schedule there that day, never changes any
+// assignment. Silently omitted if neither seat has anyone covering that hour.
+function annotateS700LunchCoverage(rows) {
+  for (const row of rows) {
+    if (row.location !== 'S700' || !isFullOfficeDay(row)) continue;
+    const coversLunch = (r) => r.day === row.day && r.start <= LUNCH_START && r.end >= LUNCH_END;
+    const atS701 = rows.find((r) => r.location === 'S701' && coversLunch(r));
+    const atBackOffice = !atS701 && rows.find((r) => r.location === 'Back Office' && coversLunch(r));
+    const cover = atS701 || atBackOffice;
+    if (!cover) continue;
+    const note = `lunch covered by ${cover.studentName}${atS701 ? '' : ' (Back Office)'}`;
+    row.reason = [row.reason, note].filter(Boolean).join('; ');
+  }
 }
 
 // Collapses back-to-back rows for the same student/day/location/reason (e.g.
