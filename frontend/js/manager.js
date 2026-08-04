@@ -99,12 +99,21 @@ function hasCapacityConflict(rows, capacity) {
 
 function renderChip(row) {
   const isManual = row['Source'] === 'Manual';
+  // Pull "lunch covered by X" out of the Notes text and render it as its own
+  // highlighted badge instead of blending into the plain grey notes line -
+  // this is the one note a manager actually needs to spot at a glance.
+  const noteSegments = (row['Notes'] || '').split('; ').filter(Boolean);
+  const lunchSegment = noteSegments.find((s) => /^lunch covered by/i.test(s));
+  const otherNotes = noteSegments.filter((s) => s !== lunchSegment).join('; ');
+  const lunchCoverBy = lunchSegment ? lunchSegment.replace(/^lunch covered by\s*/i, '') : '';
+
   const chip = document.createElement('div');
   chip.className = `chip${isManual ? ' chip-manual' : ''}`;
   chip.innerHTML = `
     <div class="chip-name">${row['Student Name'] || ''}</div>
     <div class="chip-time">${row['Start Time'] || ''} - ${row['End Time'] || ''}</div>
-    ${row['Notes'] ? `<div class="chip-reason">${row['Notes']}</div>` : ''}
+    ${otherNotes ? `<div class="chip-reason">${otherNotes}</div>` : ''}
+    ${lunchCoverBy ? `<div class="chip-lunch-cover">🍽 Lunch: ${lunchCoverBy}</div>` : ''}
     <div class="chip-actions">
       <button type="button" class="edit-chip-btn">Edit</button>
       <button type="button" class="delete-chip-btn">Delete</button>

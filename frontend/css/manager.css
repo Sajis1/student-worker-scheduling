@@ -102,6 +102,18 @@
   font-style: italic;
 }
 
+.chip-lunch-cover {
+  margin-top: 0.3rem;
+  padding: 0.2rem 0.5rem;
+  background: #fff4e0;
+  border: 1px solid #f0b429;
+  border-radius: 4px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #8a5a00;
+  display: inline-block;
+}
+
 .chip-actions {
   margin-top: 0.3rem;
   display: flex;
