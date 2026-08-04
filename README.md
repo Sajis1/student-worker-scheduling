@@ -153,7 +153,7 @@ else. See the scoring rule under "How this is actually implemented" below.
 **Office hours:** Monday–Friday, 8:00 AM – 5:00 PM.
 **Students may never be scheduled during their class times** (from Class Schedule) —
 this applies whether or not the student has actually submitted a class schedule;
-**every class block also gets a 30-minute buffer on both sides** — a shift
+**every class block also gets a 15-minute buffer on both sides** — a shift
 never starts the instant class ends or has to end the instant class begins,
 so students get a small break to get from class to work (or work to class).
 The buffer is clamped to office hours (8 AM–5 PM); a class right at the
@@ -276,7 +276,7 @@ Pure module, no Express or Smartsheet calls, so it can be exercised without
 network access. Time is represented in minutes-since-midnight.
 
 - **`computeAvailability` pads every class block by `CLASS_BUFFER_MINUTES`
-  (30 min) on both sides before subtracting it from the office day**,
+  (15 min) on both sides before subtracting it from the office day**,
   clamped to 8 AM–5 PM — this is what guarantees a student's shift never
   starts the instant their class ends or has to end the instant their next
   class begins. It's applied once, at the availability-computation level,

@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Student Worker Scheduling &mdash; PMO Overview</title>
+<style>
+  :root {
+    --paper: #f7f8fb;
+    --panel: #ffffff;
+    --ink: #16233f;
+    --ink-soft: #4a5573;
+    --navy: #1f3864;
+    --navy-deep: #142647;
+    --navy-pale: #d9e1f2;
+    --navy-pale-2: #eef2f9;
+    --maroon: #8b2b22;
+    --rule: #c9d3e3;
+    --rule-soft: #e3e8f2;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #0e1526;
+      --panel: #141d33;
+      --ink: #e8ecf6;
+      --ink-soft: #aab4cf;
+      --navy: #2c4a80;
+      --navy-deep: #1b2d50;
+      --navy-pale: #24365c;
+      --navy-pale-2: #1a2740;
+      --maroon: #c0564a;
+      --rule: #2c3a5c;
+      --rule-soft: #223257;
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    margin: 0;
+  }
+
+  .sheet {
+    max-width: 880px;
+    margin: 2rem auto;
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(20, 30, 60, 0.08);
+  }
+
+  .masthead {
+    background: linear-gradient(155deg, var(--navy) 0%, var(--navy-deep) 100%);
+    color: #fff;
+    padding: 2rem 2.5rem 1.75rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  .masthead h1 {
+    font-family: Georgia, "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+    font-size: 1.9rem;
+    font-weight: 700;
+    margin: 0 0 0.35rem;
+    text-wrap: balance;
+    letter-spacing: 0.01em;
+  }
+
+  .masthead .kicker {
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-size: 0.72rem;
+    color: var(--navy-pale);
+    font-weight: 600;
+    margin: 0 0 0.6rem;
+  }
+
+  .masthead .sub {
+    font-size: 0.98rem;
+    color: #dfe6f4;
+    margin: 0;
+    max-width: 46ch;
+  }
+
+  .masthead .meta {
+    text-align: right;
+    font-size: 0.82rem;
+    color: var(--navy-pale);
+    line-height: 1.6;
+    white-space: nowrap;
+  }
+
+  .snapshot {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--rule);
+  }
+
+  .stat {
+    background: var(--navy-pale-2);
+    padding: 1rem 1.1rem;
+  }
+
+  .stat .n {
+    font-family: Georgia, serif;
+    font-size: 1.65rem;
+    font-weight: 700;
+    color: var(--navy);
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
+  }
+
+  .stat .l {
+    font-size: 0.74rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-soft);
+    margin-top: 0.3rem;
+    font-weight: 600;
+  }
+
+  .body {
+    padding: 1.9rem 2.5rem 2.4rem;
+  }
+
+  h2.section {
+    font-family: Georgia, "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--navy);
+    margin: 0 0 0.2rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--navy);
+    text-wrap: balance;
+  }
+
+  .section-note {
+    font-size: 0.83rem;
+    color: var(--ink-soft);
+    margin: 0.45rem 0 1rem;
+  }
+
+  section + section { margin-top: 2rem; }
+
+  .cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 2.2rem;
+  }
+
+  .feature-group h3 {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--maroon);
+    font-weight: 700;
+    margin: 1.1rem 0 0.55rem;
+  }
+
+  .feature-group:first-child h3 { margin-top: 0; }
+
+  ul.features {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  ul.features li {
+    position: relative;
+    padding-left: 1.05rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.92rem;
+  }
+
+  ul.features li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0.5em;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--navy);
+  }
+
+  ul.features li b { color: var(--ink); }
+
+  ol.rules {
+    list-style: none;
+    counter-reset: rule;
+    margin: 0;
+    padding: 0;
+  }
+
+  ol.rules li {
+    counter-increment: rule;
+    position: relative;
+    padding: 0.62rem 0 0.62rem 2.3rem;
+    border-bottom: 1px solid var(--rule-soft);
+    font-size: 0.92rem;
+  }
+
+  ol.rules li:last-child { border-bottom: none; }
+
+  ol.rules li::before {
+    content: counter(rule);
+    position: absolute;
+    left: 0;
+    top: 0.62rem;
+    width: 1.6rem;
+    height: 1.6rem;
+    border-radius: 50%;
+    background: var(--navy-pale);
+    color: var(--navy);
+    font-weight: 700;
+    font-size: 0.78rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .flag {
+    display: inline-block;
+    font-size: 0.66rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 700;
+    color: #fff;
+    background: var(--maroon);
+    border-radius: 3px;
+    padding: 0.1rem 0.4rem;
+    margin-left: 0.45rem;
+    vertical-align: 1px;
+  }
+
+  .notify {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+
+  .notify .card {
+    background: var(--navy-pale-2);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    padding: 0.9rem 1.1rem;
+  }
+
+  .notify .card .who {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--navy);
+    font-weight: 700;
+    margin-bottom: 0.3rem;
+  }
+
+  .notify .card p {
+    margin: 0;
+    font-size: 0.88rem;
+    color: var(--ink-soft);
+  }
+
+  .notify .card .arrow {
+    color: var(--maroon);
+    font-weight: 700;
+  }
+
+  footer {
+    padding: 1.1rem 2.5rem 1.4rem;
+    border-top: 1px solid var(--rule);
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    font-size: 0.76rem;
+    color: var(--ink-soft);
+  }
+
+  @media (max-width: 700px) {
+    .cols { grid-template-columns: 1fr; }
+    .snapshot { grid-template-columns: repeat(2, 1fr); }
+    .masthead { flex-direction: column; align-items: flex-start; }
+    .masthead .meta { text-align: left; }
+  }
+
+  @media print {
+    body { background: #fff; }
+    .sheet {
+      margin: 0;
+      max-width: none;
+      border: none;
+      border-radius: 0;
+      box-shadow: none;
+    }
+    @page { size: letter; margin: 0.55in; }
+    section { break-inside: avoid; }
+    ol.rules li { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="sheet">
+  <div class="masthead">
+    <div>
+      <p class="kicker">UHD PMO &middot; Internal Tool Overview</p>
+      <h1>Student Worker Scheduling &amp; Management System</h1>
+      <p class="sub">What it does, and the coverage rules it enforces automatically every time a schedule is generated.</p>
+    </div>
+    <div class="meta">
+      Prepared for PMO management<br>
+      Phase 2 &mdash; live in production
+    </div>
+  </div>
+
+  <div class="snapshot">
+    <div class="stat"><div class="n">3</div><div class="l">Front desk seats</div></div>
+    <div class="stat"><div class="n">20 hr</div><div class="l">Default weekly cap</div></div>
+    <div class="stat"><div class="n">5</div><div class="l">Terms tracked</div></div>
+    <div class="stat"><div class="n">Auto + manual</div><div class="l">Scheduling model</div></div>
+  </div>
+
+  <div class="body">
+    <section>
+      <h2 class="section">What It Does</h2>
+      <p class="section-note">One system, two sides &mdash; students manage their own info, managers run the schedule.</p>
+      <div class="cols">
+        <div class="feature-group">
+          <h3>Student Portal</h3>
+          <ul class="features">
+            <li>Picks their name from a list &mdash; no separate login to manage</li>
+            <li>Submits and edits their own <b>class schedule</b>, including expected graduation term</li>
+            <li>Submits <b>time-off requests</b> and tracks their status</li>
+            <li>Gets <b>emailed automatically</b> the moment a request is approved or denied</li>
+          </ul>
+        </div>
+        <div class="feature-group">
+          <h3>Manager Dashboard</h3>
+          <ul class="features">
+            <li>Live weekly calendar across S700, TLS, S701, and Back Office</li>
+            <li>One click <b>auto-generates</b> a full week's schedule, following every rule at right</li>
+            <li>Add, edit, or delete any shift manually &mdash; overrides always survive the next auto-generate</li>
+            <li>Approve or deny time off in one click; the student is notified automatically</li>
+            <li>Per-student weekly-hours bar, tracked against that student's own cap</li>
+            <li><b>Copy for Excel</b> reproduces the PMO's existing printable schedule &mdash; extensions, phone contacts, supervisor list, hours, and grad term included</li>
+            <li>Gets <b>emailed automatically</b> whenever a student submits a new time-off request</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2 class="section">Scheduling Rules <span class="flag">Applied Every Generate</span></h2>
+      <p class="section-note">In priority order &mdash; each rule only kicks in once everything above it has had first claim on the week.</p>
+      <ol class="rules">
+        <li><b>S700 &amp; TLS come first, always.</b> Full 8&nbsp;AM&ndash;5&nbsp;PM, Monday&ndash;Friday coverage there outranks even spreading hours evenly across the team.</li>
+        <li><b>Never during class.</b> A student's submitted class schedule blocks that time, plus a 15-minute buffer on both sides to get to/from work.</li>
+        <li><b>4-hour minimum shift</b> &mdash; waived only as a last resort, to close an otherwise-uncovered full day at S700 or TLS.</li>
+        <li><b>20-hour weekly cap by default</b>, adjustable per student (e.g. to 35) anytime a manager needs to, directly in Smartsheet.</li>
+        <li><b>One shift per day.</b> No split shifts. A full 8&ndash;5 day includes an unpaid 1-hour lunch, so only 8 hours count toward the cap.</li>
+        <li><b>Home seat first.</b> A student is only moved off their primary location once their own seat's people genuinely can't cover the gap.</li>
+        <li><b>S701 is the flex seat</b> &mdash; filled last, from whatever capacity remains, except it jumps to top priority on any day one person is covering S700 alone all day (so someone's nearby for their lunch).</li>
+        <li><b>Escalation order for gaps:</b> mix in other Front Desk staff, then Floaters, then Back Office &mdash; Floaters are the only backup S701 ever gets.</li>
+        <li><b>Bonus 2nd S700 seat</b>, filled last, purely to help whoever's furthest behind on hours catch up.</li>
+        <li><b>Managers always have final say.</b> Any shift can be added, changed, or removed by hand at any time.</li>
+      </ol>
+    </section>
+
+    <section>
+      <h2 class="section">Notifications</h2>
+      <p class="section-note">Both directions run automatically through Smartsheet &mdash; no manual follow-up needed.</p>
+      <div class="notify">
+        <div class="card">
+          <div class="who">Student submits request <span class="arrow">&rarr;</span> Manager</div>
+          <p>Managers are emailed the instant a new time-off request comes in.</p>
+        </div>
+        <div class="card">
+          <div class="who">Manager sets status <span class="arrow">&rarr;</span> Student</div>
+          <p>The student is emailed the moment their request is approved or denied.</p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <footer>
+    <span>No login system yet (Phase 1 &mdash; accepted tradeoff). Real hosting/SharePoint embedding still to come.</span>
+    <span>Student Worker Scheduling &amp; Management System &middot; PMO</span>
+  </footer>
+</div>
+</body>
+</html>

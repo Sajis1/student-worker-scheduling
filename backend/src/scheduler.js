@@ -9,7 +9,7 @@ const LUNCH_START = 720; // 12:00 PM
 const LUNCH_END = 780; // 1:00 PM
 const MIN_SHIFT_MINUTES = 240; // 4 hours - a hard constraint, no shift is ever assigned shorter than this
 const WEEKLY_CAP_MINUTES = 1200; // 20 hours/week - default cap, used when a student has no valid Max Hours override
-const CLASS_BUFFER_MINUTES = 30; // small break before/after class, so a shift never starts the instant class ends or ends the instant class starts
+const CLASS_BUFFER_MINUTES = 15; // small break before/after class, so a shift never starts the instant class ends or ends the instant class starts
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
 // A shift spanning the full 8am-5pm office day includes a mandatory unpaid
