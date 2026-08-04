@@ -160,18 +160,16 @@ The buffer is clamped to office hours (8 AM–5 PM); a class right at the
 start or end of the day doesn't create a buffer reaching outside office
 hours, since there's nothing to protect out there.
 a student with zero Class Schedule rows is simply treated as free all day.
-**Minimum shift: 4 hours, except as an absolute last resort for S700/TLS.**
-No shift is ever generated shorter than this — if the only coverage
-available for a gap would be under 4 hours, the gap is left uncovered and
-reported, rather than assigning a short shift. **The one exception: if a
-sub-4-hour sliver is the only thing standing between S700 or TLS and full
-8-5 coverage for the day, and nothing else (home pool, mixed Front Desk,
-Floaters, Back Office cascade) could close it at normal length, a short
-shift is assigned anyway** — full S700/TLS coverage outranks the 4-hour
-floor. This never applies to S701 or Back Office; those gaps are still just
-reported. A short shift like this is tagged in Notes with "short shift:
-only way to close a full coverage day" so it's obvious at a glance on the
-dashboard.
+**Minimum shift: 4 hours, no exceptions.** No shift is ever generated shorter
+than this — if the only coverage available for a gap would be under 4 hours,
+the gap is left uncovered and reported, rather than assigning a short shift.
+This used to have a "S700/TLS full coverage outranks the 4-hour floor" last-
+resort exception, but it was removed: it caused a real bug where a single
+leftover gap got fragmented across several different people instead of one
+short shift, each taking whatever sliver of their own limited availability
+was left (down to 15-minute shifts) — worse than just reporting the gap. A
+manager can always manually add a short shift by hand if one is genuinely
+wanted for a specific day.
 **Maximum 20 hours per student per week by default** (hard cap, enforced
 across the whole week, not per day) — **overridable per student via the
 `Max Hours` column on Student Master** (e.g. up to 35, budget permitting).
@@ -345,19 +343,19 @@ network access. Time is represented in minutes-since-midnight.
   a stub of the day uncovered if picked instead.
 - **Any candidate whose available overlap is under 4 hours (240 minutes) is
   skipped entirely** for that pick — a gap either gets a real 4+ hour shift or
-  stays a reported gap, never a short filler shift. **Exception: `fillSeatFromPool`'s
-  `allowShortShift` parameter (false by default)** waives this check entirely.
-  It's turned on for exactly one call per day, per seat, and only for S700/TLS:
-  a final pass, after home pool, mixed Front Desk, Floaters, and the Back
-  Office cascade have all already run and a gap still remains, offered to the
-  full combined roster (`frontDesk + floaters + backOffice`) with
-  `avoidOrphans` off too. This is what closes a gap like "8:00-11:15 AM left
-  over after everyone else who could legally take a 4+ hour chunk already has"
-  — genuinely nobody's fault, just a structural leftover smaller than the
-  minimum, and S700/TLS's "always covered" rule wins over the 4-hour floor
-  once every normal-length option is exhausted. Tagged in Notes with "short
-  shift: only way to close a full coverage day" (overriding the usual
-  `mix:`/`floater:` tag) so it's never mistaken for a normal assignment.
+  stays a reported gap, never a short filler shift, no exceptions.
+  > **Removed, don't re-add without fixing the underlying issue first:**
+  > `fillSeatFromPool` used to have an `allowShortShift` parameter, turned on
+  > for one last-resort pass per day/seat (S700/TLS only) after every normal
+  > option was exhausted, tagged "short shift: only way to close a full
+  > coverage day". It caused a real bug: the function's greedy `while`
+  > loop doesn't stop after one pick, so it kept re-entering and fragmenting
+  > a single leftover gap across several different people, each grabbing
+  > whatever sliver of their own limited availability was left (down to
+  > 15-minute shifts) — e.g. a 3.5-hour TLS gap on one Wednesday ended up
+  > split across 4 different students instead of one short shift filling it.
+  > If this guarantee is wanted again, it needs to pick exactly one candidate
+  > for the *entire* remaining gap and stop, not loop.
 - **A student can be picked at most once per day** — as soon as they're
   assigned anything, they're removed from consideration for every other seat
   that same day. This guarantees one continuous shift per day.

@@ -210,7 +210,6 @@ function fillSeatFromPool(
   ctx,
   forcedReason,
   avoidOrphans = true,
-  allowShortShift = false,
   maximizeUnderutilized = false
 ) {
   const { day, getAvailability, consume, usedToday, weeklyMinutes, daysWorked, generatedRows, maxWeeklyMinutesByStudent } = ctx;
@@ -232,7 +231,7 @@ function fillSeatFromPool(
           if (cappedEnd <= overlap.start) continue;
           const interval = { start: overlap.start, end: cappedEnd };
           const overlapMinutes = interval.end - interval.start;
-          if (!allowShortShift && overlapMinutes < MIN_SHIFT_MINUTES) continue; // 4-hour hard minimum
+          if (overlapMinutes < MIN_SHIFT_MINUTES) continue; // 4-hour hard minimum, no exception
           if (avoidOrphans) {
             const wasCapTruncated = cappedEnd < overlap.end;
             const leftoverAfter = gapWindow.end - interval.end;
@@ -499,47 +498,14 @@ function generateWeeklySchedule({ students, classRows, timeOffRows, manualRows, 
     for (const seatInstance of [s700Instance, tlsInstance]) {
       fillSeatFromPool(seatInstance, backOffice, ctx, 'flex: pulled from Back Office', false);
     }
-    // Absolute last resort: S700/TLS full 8-5 coverage outranks the 4-hour
-    // minimum. Whatever sliver of the day nobody could legally cover above
-    // (always under 4 hours, or every normal candidate would've taken it)
-    // gets offered with the minimum waived - never for S701 or Back Office,
-    // and only after every normal-length option above has already been
-    // exhausted. Kept as three separate tiered calls (not one merged pool)
-    // so a Floater still gets first crack before a regular Back Office
-    // student, same priority order as the normal-length cascade just above -
-    // a flat merged pool would let plain overlap/days-worked scoring pick a
-    // Back Office student over an equally-available Floater, which isn't
-    // the intended fallback order.
-    for (const seatInstance of [s700Instance, tlsInstance]) {
-      fillSeatFromPool(
-        seatInstance,
-        frontDesk,
-        ctx,
-        'short shift: only way to close a full coverage day',
-        false,
-        true
-      );
-    }
-    for (const seatInstance of [s700Instance, tlsInstance]) {
-      fillSeatFromPool(
-        seatInstance,
-        floaters,
-        ctx,
-        'short shift: only way to close a full coverage day',
-        false,
-        true
-      );
-    }
-    for (const seatInstance of [s700Instance, tlsInstance]) {
-      fillSeatFromPool(
-        seatInstance,
-        backOffice,
-        ctx,
-        'short shift: only way to close a full coverage day',
-        false,
-        true
-      );
-    }
+    // No short-shift last resort: S700/TLS gaps under 4 hours are always
+    // just left as reported gaps, never filled by anyone under the 4-hour
+    // minimum. This used to have a "waive the minimum" exception here, but
+    // fillSeatFromPool's greedy while-loop doesn't stop after one pick - it
+    // kept looping and fragmenting a single leftover gap across several
+    // different people, each taking whatever sliver of their own limited
+    // availability was left (down to 15-minute shifts), which is worse than
+    // just reporting the gap. Removed rather than patched.
   }
 
   // Pass 1c: on any day S700 ended up covered by exactly one person for the
@@ -612,7 +578,6 @@ function generateWeeklySchedule({ students, classRows, timeOffRows, manualRows, 
       [...frontDesk, ...floaters, ...backOffice],
       ctx,
       'bonus: 2nd S700 seat - extra hours',
-      false,
       false,
       true
     );
