@@ -56,10 +56,10 @@ const api = {
   getWorkSchedule: (semester) =>
     apiRequest(`/api/work-schedule?semester=${encodeURIComponent(semester)}`),
 
-  generateSchedule: (semester, asOfDate) =>
+  generateSchedule: (semester, asOfDate, overrideManual) =>
     apiRequest('/api/work-schedule/generate', {
       method: 'POST',
-      body: JSON.stringify({ semester, asOfDate }),
+      body: JSON.stringify({ semester, asOfDate, overrideManual }),
     }),
 
   addWorkScheduleRow: (row) =>

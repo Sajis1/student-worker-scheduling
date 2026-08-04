@@ -20,7 +20,7 @@
       <p class="hint">
         Fills S700, then TLS, then S701 from each student's class availability, flexing
         S701 then Back Office to cover S700/TLS gaps. Manual overrides below are never
-        touched by Generate.
+        touched by Generate, unless "Also overwrite manual edits" is checked.
       </p>
       <label for="semester-input">Semester</label>
       <input id="semester-input" type="text" placeholder="e.g. Fall 2026" value="Fall 2026" />
@@ -31,6 +31,12 @@
         A student with approved time off covering this date is left out of the generated
         pattern entirely. Re-run Generate once their time off ends.
       </p>
+
+      <label class="checkbox-label">
+        <input id="override-manual-checkbox" type="checkbox" />
+        Also overwrite manual edits (deletes every manual shift for this semester and
+        rebuilds the whole schedule from scratch)
+      </label>
 
       <button id="generate-btn" type="button">Generate Schedule</button>
       <p id="generate-status" class="status" hidden></p>

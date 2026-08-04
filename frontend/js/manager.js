@@ -548,6 +548,15 @@ async function handleGenerate() {
     return;
   }
 
+  const overrideManual = document.getElementById('override-manual-checkbox').checked;
+  if (overrideManual) {
+    const proceed = await appConfirm(
+      `⚠ This will delete every manual shift for ${semester} and rebuild the whole schedule from scratch - manual edits will NOT survive this run. Continue?`,
+      'warning'
+    );
+    if (!proceed) return;
+  }
+
   btn.disabled = true;
   showStatus(statusEl, 'Generating...', 'status');
   gapsPanel.hidden = true;
@@ -555,10 +564,10 @@ async function handleGenerate() {
   showGapsBtn.textContent = 'View Uncovered Gaps';
 
   try {
-    const result = await api.generateSchedule(semester, asOfDate || undefined);
+    const result = await api.generateSchedule(semester, asOfDate || undefined, overrideManual);
     showStatus(
       statusEl,
-      `Added ${result.added} generated rows, removed ${result.removed} previous generated rows.` +
+      `Added ${result.added} generated rows, removed ${result.removed} previous ${result.overrodeManual ? '' : 'generated '}rows.` +
         (result.warnings.length ? ` Warnings: ${result.warnings.join(' ')}` : ''),
       'success'
     );

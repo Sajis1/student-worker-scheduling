@@ -24,10 +24,14 @@ router.get('/', async (req, res) => {
 });
 
 // POST /api/work-schedule/generate -> run the scheduler and replace this
-// semester's Generated rows. Existing Manual rows are never touched.
+// semester's Generated rows. Existing Manual rows are never touched, UNLESS
+// `overrideManual: true` is passed - then every row for the semester
+// (Manual and Generated alike) is deleted and rebuilt from scratch, and
+// nothing is treated as pre-occupied. Opt-in and off by default since this
+// is the one way Generate can destroy a manager's deliberate manual edits.
 router.post('/generate', async (req, res) => {
   try {
-    const { semester } = req.body;
+    const { semester, overrideManual } = req.body;
     const asOfDate = req.body.asOfDate || todayIso();
     if (!semester) {
       return res.status(400).json({ error: 'semester is required.' });
@@ -51,8 +55,10 @@ router.post('/generate', async (req, res) => {
       .filter((student) => student.name);
 
     const existingForSemester = workScheduleRows.filter((row) => row['Semester'] === semester);
-    const manualRows = existingForSemester.filter((row) => row['Source'] === 'Manual');
-    const staleGeneratedRows = existingForSemester.filter((row) => row['Source'] === 'Generated');
+    const manualRows = overrideManual ? [] : existingForSemester.filter((row) => row['Source'] === 'Manual');
+    const staleRows = overrideManual
+      ? existingForSemester
+      : existingForSemester.filter((row) => row['Source'] === 'Generated');
 
     const { generatedRows, gaps, warnings } = generateWeeklySchedule({
       students,
@@ -77,13 +83,14 @@ router.post('/generate', async (req, res) => {
 
     await deleteRows(
       process.env.WORK_SCHEDULE_SHEET_ID,
-      staleGeneratedRows.map((row) => row.rowId)
+      staleRows.map((row) => row.rowId)
     );
     await addRows(process.env.WORK_SCHEDULE_SHEET_ID, newFieldRows);
 
     res.json({
       added: newFieldRows.length,
-      removed: staleGeneratedRows.length,
+      removed: staleRows.length,
+      overrodeManual: Boolean(overrideManual),
       gaps: gaps.map((gap) => ({
         day: gap.day,
         location: gap.location,
