@@ -36,16 +36,26 @@
   white-space: nowrap;
 }
 
-/* Location column: slim and lets its text wrap (e.g. "S700" / "(2 seats)"
-   on two lines) instead of claiming as much width as a day column - this is
-   what actually buys back room for the 5 day columns without needing to
-   scroll in the common case. */
+/* Location column: slim and always splits onto two lines (seat count on its
+   own line via a <br> in the markup, not just wrap-if-it-happens-to-fit)
+   instead of claiming as much width as a day column - this is what actually
+   buys back room for the 5 day columns without needing to scroll in the
+   common case. word-wrap/overflow-wrap guarantee nothing ever gets clipped
+   even if a word alone is wider than the column; font-size is dropped a
+   notch since 90px is tight for the longest label ("S701" + "(1 seat,
+   flex)"). */
 #calendar-table td:first-child,
 #calendar-table th:first-child {
   min-width: 0;
-  width: 90px;
+  width: 80px;
+  font-size: 0.82rem;
   white-space: normal;
   word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+#calendar-table td:first-child .hint {
+  font-size: 0.74rem;
 }
 
 #calendar-table td {
