@@ -170,7 +170,7 @@ async function loadCalendar() {
 // works there even though downloads and the modern Clipboard API don't, so
 // copy-to-clipboard is the one export path that works everywhere this
 // dashboard gets used - a browser tab or an embedded Teams tab alike.
-const LOCATION_MARKER = { S701: '*', TLS: '^', S700: 'F', 'Back Office': 'BO' };
+const LOCATION_MARKER = { S701: '*', TLS: '^', S700: 'F', 'Back Office': '~' };
 // Single-quoted font names: the table's own style attribute is double-quoted,
 // so double-quoting these too would prematurely close it and corrupt the
 // markup (caught by testing the actual clipboard HTML, not just the visible
@@ -278,7 +278,12 @@ function buildScheduleTableHtml() {
 
   const th = 'style="background:#1F3864;color:#fff;font-weight:bold;text-align:center;border:1px solid #999;padding:5px 10px;"';
   const dayLabelTd = 'style="background:#D9E1F2;font-weight:bold;text-align:center;border:1px solid #999;padding:5px 10px;white-space:nowrap;"';
-  const cellTd = 'style="text-align:center;border:1px solid #999;padding:5px 10px;white-space:nowrap;"';
+  // No nowrap here (unlike dayLabelTd) - a long entry like "8:00-3:30 ~"
+  // used to overflow past its own cell into the neighboring student's column
+  // instead of wrapping, making two separate people's boxes look visually
+  // connected. Letting it wrap keeps every cell's content inside its own
+  // borders.
+  const cellTd = 'style="text-align:center;border:1px solid #999;padding:5px 10px;"';
   const totalTd = 'style="background:#D9E1F2;font-weight:bold;text-align:center;border:1px solid #999;padding:5px 10px;"';
   const spacerTd = '<td style="border:none;background:transparent;width:28px;"></td>';
 
@@ -357,7 +362,7 @@ function buildScheduleTableHtml() {
         const groupColspan = g.students.length + 1;
         const name = g.students[rowIndex];
         const cellHtml = name ? `${htmlEscape(name)}: ${htmlEscape(infoFor(name).phone || '')}` : '';
-        return `${i > 0 ? spacerTd : ''}<td colspan="${groupColspan}" style="border:1px solid #999;padding:4px 10px;">${cellHtml}</td>`;
+        return `${i > 0 ? spacerTd : ''}<td colspan="${groupColspan}" style="border:1px solid #999;padding:4px 10px;text-align:center;">${cellHtml}</td>`;
       })
       .join('')}</tr>`
   ).join('');
@@ -367,7 +372,7 @@ function buildScheduleTableHtml() {
   const legendRow = `<tr>${groups
     .map((g, i) => {
       const groupColspan = g.students.length + 1;
-      return `${i > 0 ? spacerTd : ''}<td colspan="${groupColspan}" style="border:1px solid #999;padding:5px 10px;">* = S701&nbsp;&nbsp;&nbsp;^ = TLS&nbsp;&nbsp;&nbsp;F = S700&nbsp;&nbsp;&nbsp;BO = Back Office</td>`;
+      return `${i > 0 ? spacerTd : ''}<td colspan="${groupColspan}" style="border:1px solid #999;padding:5px 10px;">* = S701&nbsp;&nbsp;&nbsp;^ = TLS&nbsp;&nbsp;&nbsp;F = S700&nbsp;&nbsp;&nbsp;~ = Back Office</td>`;
     })
     .join('')}</tr>`;
 
@@ -380,7 +385,7 @@ function buildScheduleTableHtml() {
         `<tr>${groups
           .map((g, i) => {
             const groupColspan = g.students.length + 1;
-            return `${i > 0 ? spacerTd : ''}<td colspan="${groupColspan}" style="border:1px solid #999;padding:4px 10px;">${htmlEscape(sup.name)}: ${htmlEscape(sup.phone || '')}</td>`;
+            return `${i > 0 ? spacerTd : ''}<td colspan="${groupColspan}" style="border:1px solid #999;padding:4px 10px;text-align:center;">${htmlEscape(sup.name)}: ${htmlEscape(sup.phone || '')}</td>`;
           })
           .join('')}</tr>`
     )
@@ -748,16 +753,23 @@ async function handleShiftFormSubmit(e) {
   }
 }
 
-// --- Pending time off ---
+// --- Time off ---
+// Shows every request, not just Pending ones - Approve/Deny only renders for
+// a row still awaiting a decision; Approved/Denied rows just show their
+// status as plain text instead. Pending requests sort first so the ones
+// needing action are still the easiest to spot.
 async function loadPendingTimeOff() {
   const tbody = document.querySelector('#time-off-table tbody');
   const emptyMsg = document.getElementById('time-off-empty');
   try {
     const rows = await api.getTimeOff();
-    const pending = rows.filter((r) => r['Status'] === 'Pending');
+    const statusOrder = { Pending: 0, Approved: 1, Denied: 2 };
+    const sorted = [...rows].sort((a, b) => (statusOrder[a['Status']] ?? 3) - (statusOrder[b['Status']] ?? 3));
     tbody.innerHTML = '';
-    emptyMsg.hidden = pending.length > 0;
-    pending.forEach((row) => {
+    emptyMsg.hidden = sorted.length > 0;
+    sorted.forEach((row) => {
+      const status = row['Status'] || '';
+      const isPending = status === 'Pending';
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td>${row['Student Name'] || ''}</td>
@@ -765,17 +777,23 @@ async function loadPendingTimeOff() {
         <td>${row['End Date'] || ''}</td>
         <td>${row['Reason'] || ''}</td>
         <td>${row['Submitted Date'] || ''}</td>
+        <td>${htmlEscape(status)}</td>
         <td>
-          <button type="button" class="approve-btn">Approve</button>
-          <button type="button" class="deny-btn">Deny</button>
+          ${
+            isPending
+              ? '<button type="button" class="approve-btn">Approve</button><button type="button" class="deny-btn">Deny</button>'
+              : ''
+          }
         </td>
       `;
-      tr.querySelector('.approve-btn').addEventListener('click', () => setTimeOffStatus(row.rowId, 'Approved'));
-      tr.querySelector('.deny-btn').addEventListener('click', () => setTimeOffStatus(row.rowId, 'Denied'));
+      if (isPending) {
+        tr.querySelector('.approve-btn').addEventListener('click', () => setTimeOffStatus(row.rowId, 'Approved'));
+        tr.querySelector('.deny-btn').addEventListener('click', () => setTimeOffStatus(row.rowId, 'Denied'));
+      }
       tbody.appendChild(tr);
     });
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="6">Could not load time-off requests: ${err.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7">Could not load time-off requests: ${err.message}</td></tr>`;
   }
 }
 

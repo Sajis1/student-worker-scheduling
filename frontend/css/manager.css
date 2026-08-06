@@ -81,15 +81,22 @@
   transition: width 0.4s ease;
 }
 
+/* Solid pill instead of a text-shadow glow - the glow read fine over the
+   fill's light end but nearly disappeared over its dark navy end (dark text,
+   soft white blur, dark background all at once), exactly where a
+   near-/at-cap student's label always lands. A solid background is legible
+   no matter what's underneath it. */
 .hours-bar-label {
   position: absolute;
   top: 50%;
-  right: 0.6rem;
+  right: 0.4rem;
   transform: translateY(-50%);
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   font-weight: 700;
   color: var(--text);
-  text-shadow: 0 0 4px rgba(255, 255, 255, 0.9), 0 0 4px rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.94);
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
 }
 
 #weekly-hours-table td:last-child {

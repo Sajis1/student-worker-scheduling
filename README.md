@@ -642,9 +642,10 @@ below — nothing spans across the gap between them:
 - Header row of student names, an `Ext.` row (from Student Master's
   `Extension` column)
 - Monday–Friday shift rows, using `*` = S701, `^` = TLS, `F` = S700,
-  `BO` = Back Office as location markers (this mapping was reverse-engineered
-  from the PMO's actual paper reference card — don't swap S700/S701's markers
-  back without checking that card again)
+  `~` = Back Office as location markers (the S700/S701/TLS mapping was
+  reverse-engineered from the PMO's actual paper reference card — don't swap
+  those back without checking that card again; Back Office's marker changed
+  from `BO` to `~` per manager preference, no card constraint either way)
 - A `Total Hrs` row and a separate `Grad` row (student's Expected Grad,
   auto-abbreviated — see the Class Schedule section above)
 - A per-student contact list (`Name: Phone`, from Student Master)

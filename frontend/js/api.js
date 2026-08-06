@@ -39,7 +39,7 @@ const api = {
 
   // No studentName -> no query string at all (not "?student=undefined",
   // which the backend would filter on literally and match nothing). The
-  // manager dashboard's Pending Time Off panel calls this with no argument
+  // manager dashboard's Time Off Requests panel calls this with no argument
   // to get every student's requests.
   getTimeOff: (studentName) =>
     apiRequest(`/api/time-off${studentName ? `?student=${encodeURIComponent(studentName)}` : ''}`),
