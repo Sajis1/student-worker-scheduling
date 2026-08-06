@@ -36,6 +36,18 @@
   white-space: nowrap;
 }
 
+/* Location column: slim and lets its text wrap (e.g. "S700" / "(2 seats)"
+   on two lines) instead of claiming as much width as a day column - this is
+   what actually buys back room for the 5 day columns without needing to
+   scroll in the common case. */
+#calendar-table td:first-child,
+#calendar-table th:first-child {
+  min-width: 0;
+  width: 90px;
+  white-space: normal;
+  word-wrap: break-word;
+}
+
 #calendar-table td {
   vertical-align: top;
   min-width: 155px;
