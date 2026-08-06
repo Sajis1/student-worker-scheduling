@@ -21,9 +21,19 @@
   width: auto;
 }
 
+.table-scroll {
+  overflow-x: auto;
+}
+
+#calendar-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
 #calendar-table thead th {
   background: var(--brand-light);
   border-radius: 6px 6px 0 0;
+  white-space: nowrap;
 }
 
 #calendar-table td {
@@ -117,7 +127,8 @@
 .chip-actions {
   margin-top: 0.3rem;
   display: flex;
-  gap: 0.75rem;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.55rem;
 }
 
 .chip-actions button {
@@ -126,7 +137,8 @@
   text-decoration: underline;
   cursor: pointer;
   padding: 0;
-  font-size: 0.78rem;
+  font-size: 0.74rem;
+  white-space: nowrap;
 }
 
 .edit-chip-btn {
