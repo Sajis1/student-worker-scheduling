@@ -1,6 +1,6 @@
 .manager-main {
-  max-width: 1000px;
-  margin: 2rem auto;
+  max-width: 1080px;
+  margin: 2.25rem auto;
   padding: 0 1.25rem;
 }
 
@@ -10,6 +10,8 @@
   gap: 0.5rem;
   font-weight: 400;
   font-size: 0.88rem;
+  text-transform: none;
+  letter-spacing: normal;
   color: var(--text);
   margin-top: 0.9rem;
   cursor: pointer;
@@ -184,9 +186,10 @@
 
 .chip-legend {
   display: inline-block;
-  padding: 0.15rem 0.6rem;
+  padding: 0.2rem 0.65rem;
   border-radius: 4px;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
+  font-weight: 600;
   margin-right: 0.5rem;
 }
 
@@ -237,13 +240,18 @@
   margin-top: 0.75rem;
   padding: 0.75rem 1rem;
   background: var(--danger-light);
+  border-left: 3px solid var(--danger);
   border-radius: 6px;
 }
 
 #gaps-panel h3 {
   margin-top: 0;
+  font-family: var(--font-body);
   font-size: 0.9rem;
+  font-weight: 700;
   color: var(--danger);
+  border-bottom: none;
+  padding-bottom: 0;
 }
 
 #gaps-list {
@@ -277,13 +285,13 @@
   background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%);
   color: white;
   border: none;
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+  box-shadow: 0 2px 8px rgba(20, 38, 71, 0.3);
 }
 
 #generate-btn:hover,
 #show-gaps-btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
+  box-shadow: 0 4px 14px rgba(20, 38, 71, 0.4);
 }
 
 #refresh-calendar-btn,

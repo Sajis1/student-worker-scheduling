@@ -8,7 +8,10 @@
 </head>
 <body>
   <header class="app-header">
-    <h1>IT Work Schedule</h1>
+    <div class="app-header-title">
+      <p class="kicker">UHD PMO</p>
+      <h1>IT Work Schedule</h1>
+    </div>
     <div id="current-student" class="current-student" hidden>
       Signed in as <strong id="current-student-name"></strong>
       <button id="switch-student-btn" type="button" class="link-btn">Not you?</button>
@@ -42,29 +45,40 @@
         <form id="class-schedule-form">
           <input type="hidden" id="cs-rowid" />
 
-          <label for="cs-day">Day</label>
-          <select id="cs-day" required>
-            <option value="">Select a day</option>
-            <option>Monday</option>
-            <option>Tuesday</option>
-            <option>Wednesday</option>
-            <option>Thursday</option>
-            <option>Friday</option>
-            <option>Saturday</option>
-            <option>Sunday</option>
-          </select>
+          <div class="field-grid">
+            <div class="field">
+              <label for="cs-day">Day</label>
+              <select id="cs-day" required>
+                <option value="">Select a day</option>
+                <option>Monday</option>
+                <option>Tuesday</option>
+                <option>Wednesday</option>
+                <option>Thursday</option>
+                <option>Friday</option>
+                <option>Saturday</option>
+                <option>Sunday</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="cs-start">Start time</label>
+              <input id="cs-start" type="time" required />
+            </div>
+            <div class="field">
+              <label for="cs-end">End time</label>
+              <input id="cs-end" type="time" required />
+            </div>
+          </div>
 
-          <label for="cs-start">Start time</label>
-          <input id="cs-start" type="time" required />
-
-          <label for="cs-end">End time</label>
-          <input id="cs-end" type="time" required />
-
-          <label for="cs-semester">Semester</label>
-          <select id="cs-semester" required></select>
-
-          <label for="cs-grad">Expected graduation (optional)</label>
-          <input id="cs-grad" type="text" placeholder="e.g. Spring 2027, or Temp" />
+          <div class="field-grid">
+            <div class="field">
+              <label for="cs-semester">Semester</label>
+              <select id="cs-semester" required></select>
+            </div>
+            <div class="field">
+              <label for="cs-grad">Expected graduation (optional)</label>
+              <input id="cs-grad" type="text" placeholder="e.g. Spring 2027, or Temp" />
+            </div>
+          </div>
 
           <button type="submit" id="cs-submit-btn">Submit</button>
           <button type="button" id="cs-cancel-btn" hidden>Cancel</button>
@@ -83,11 +97,16 @@
       <section id="tab-time-off" class="tab-panel card" hidden>
         <h2>Time Off Requests</h2>
         <form id="time-off-form">
-          <label for="to-start">Start date</label>
-          <input id="to-start" type="date" required />
-
-          <label for="to-end">End date</label>
-          <input id="to-end" type="date" required />
+          <div class="field-grid">
+            <div class="field">
+              <label for="to-start">Start date</label>
+              <input id="to-start" type="date" required />
+            </div>
+            <div class="field">
+              <label for="to-end">End date</label>
+              <input id="to-end" type="date" required />
+            </div>
+          </div>
 
           <label for="to-reason">Reason (optional)</label>
           <input id="to-reason" type="text" />
