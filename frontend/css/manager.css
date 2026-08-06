@@ -133,6 +133,10 @@
   color: var(--brand);
 }
 
+.duplicate-chip-btn {
+  color: var(--success);
+}
+
 .delete-chip-btn {
   color: var(--danger);
 }

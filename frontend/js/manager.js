@@ -116,10 +116,12 @@ function renderChip(row) {
     ${lunchCoverBy ? `<div class="chip-lunch-cover">🍽 Lunch: ${lunchCoverBy}</div>` : ''}
     <div class="chip-actions">
       <button type="button" class="edit-chip-btn">Edit</button>
+      <button type="button" class="duplicate-chip-btn">Duplicate</button>
       <button type="button" class="delete-chip-btn">Delete</button>
     </div>
   `;
   chip.querySelector('.edit-chip-btn').addEventListener('click', () => startEditShift(row));
+  chip.querySelector('.duplicate-chip-btn').addEventListener('click', () => duplicateShift(row));
   chip.querySelector('.delete-chip-btn').addEventListener('click', () => deleteShift(row));
   return chip;
 }
@@ -667,6 +669,24 @@ function startEditShift(row) {
   document.getElementById('shift-end').value = to24Hour(row['End Time']);
   fillSemesterSelect(document.getElementById('shift-semester'), row['Semester']);
   document.getElementById('shift-notes').value = row['Notes'] || '';
+  document.getElementById('shift-form-panel').scrollIntoView({ behavior: 'smooth' });
+}
+
+// For a shift that repeats on another day: prefill everything from an
+// existing row (minus the day) so the manager only has to pick the other
+// day instead of retyping student/location/time/semester/notes. Always
+// submits as a new row (Source: Manual), regardless of the original row's
+// own Source - same as editing.
+function duplicateShift(row) {
+  resetShiftForm();
+  document.getElementById('shift-student').value = row['Student Name'];
+  document.getElementById('shift-day').value = '';
+  document.getElementById('shift-location').value = row['Location'];
+  document.getElementById('shift-start').value = to24Hour(row['Start Time']);
+  document.getElementById('shift-end').value = to24Hour(row['End Time']);
+  fillSemesterSelect(document.getElementById('shift-semester'), row['Semester']);
+  document.getElementById('shift-notes').value = row['Notes'] || '';
+  showStatus(document.getElementById('shift-form-status'), 'Pick the other day this repeats on, then submit.', 'success');
   document.getElementById('shift-form-panel').scrollIntoView({ behavior: 'smooth' });
 }
 
