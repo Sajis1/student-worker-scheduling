@@ -481,12 +481,15 @@ network access. Time is represented in minutes-since-midnight.
 - **Back Office day-spreading uses a different mechanism than Front Desk**:
   `backOfficeDailyBudget()` caps each student's *own* daily pick at their
   fair daily share (remaining weekly budget Ã· remaining weekdays, floored at
-  the 2-hour minimum). Front Desk seats don't need this â€” their spreading
-  comes from the days-worked scoring competition between candidates â€” but
-  Back Office assignment has no equivalent competition to lean on (nobody's
-  competing for anybody else's slot), so without this explicit per-student
-  cap a fully-available student would burn all 20 hours in the first 2-3
-  days and vanish from the schedule for the rest of the week.
+  the 2-hour minimum, **rounded up to the nearest 15 minutes** â€” plain
+  division doesn't preserve 15-alignment on its own, e.g. 1200 Ã· 3 = 400,
+  which isn't a multiple of 15, and this value flows straight into a Back
+  Office shift's assigned end time). Front Desk seats don't need this â€” their
+  spreading comes from the days-worked scoring competition between
+  candidates â€” but Back Office assignment has no equivalent competition to
+  lean on (nobody's competing for anybody else's slot), so without this
+  explicit per-student cap a fully-available student would burn all 20 hours
+  in the first 2-3 days and vanish from the schedule for the rest of the week.
 - After independent assignment, whatever stretch of the day nobody happened
   to cover is still surfaced in `gaps[]` â€” informational only, it never
   limits or gates who gets scheduled. A Back Office gap most often just means

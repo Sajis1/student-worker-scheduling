@@ -356,7 +356,14 @@ function backOfficeDailyBudget(studentName, ctx) {
   const weeklyCap = ctx.maxWeeklyMinutesByStudent.get(studentName) ?? WEEKLY_CAP_MINUTES;
   const remainingBudget = weeklyCap - (ctx.weeklyMinutes.get(studentName) || 0);
   if (remainingBudget <= 0) return 0;
-  const fairShare = Math.ceil(remainingBudget / ctx.daysRemaining);
+  // Rounded up to the nearest 15 minutes, not just the nearest minute -
+  // dividing by daysRemaining doesn't preserve 15-alignment on its own (e.g.
+  // 1200/3 = 400, not a multiple of 15), and this fairShare value flows
+  // straight into a shift's assigned end time in assignBackOfficeIndependently.
+  // Safe to round up: the Math.min(remainingBudget, ...) below still stops
+  // it from ever granting more than the student's own real remaining budget
+  // (which is itself already 15-aligned).
+  const fairShare = Math.ceil(remainingBudget / ctx.daysRemaining / 15) * 15;
   return Math.min(remainingBudget, Math.max(MIN_SHIFT_MINUTES, fairShare));
 }
 
