@@ -59,10 +59,15 @@ function budgetCappedEnd(overlap, remainingBudget) {
 // Student Master's Max Hours column overrides the default 20-hour weekly cap
 // per student (e.g. up to 35, budget permitting). Blank/0/non-numeric falls
 // back to the default - this is what lets most students stay at 20 while a
-// manager raises just one or two.
+// manager raises just one or two. Floored (never rounded up) to the nearest
+// 15 minutes - a manager typing a non-quarter-hour value (e.g. 20.1 hours)
+// never grants more budget than they actually entered, and this is what
+// keeps budgetCappedEnd's cap-truncated shift ends landing on :00/:15/:30/
+// :45 too, same as every other boundary in this file.
 function resolveMaxWeeklyMinutes(maxHours) {
   const hours = Number(maxHours);
-  return Number.isFinite(hours) && hours > 0 ? hours * 60 : WEEKLY_CAP_MINUTES;
+  if (!Number.isFinite(hours) || hours <= 0) return WEEKLY_CAP_MINUTES;
+  return Math.floor((hours * 60) / 15) * 15;
 }
 
 function parseTimeToMinutes(text) {
@@ -118,6 +123,21 @@ function computeAvailability({ day, classRows, manualOccupied, unavailableAllDay
       end: parseTimeToMinutes(row['End Time']),
     }))
     .filter((iv) => iv.start != null && iv.end != null && iv.end > iv.start)
+    // Round each raw class time outward to the nearest 15-minute mark - a
+    // student-submitted time that lands on an odd minute (the portal's time
+    // input has no step restriction) only ever WIDENS the blocked window
+    // (start rounds earlier, end rounds later), never narrows it, so nobody
+    // is ever treated as free a few minutes before/after their real class.
+    // This is also what keeps every downstream boundary (buffer, gap,
+    // assigned shift start/end) landing on :00/:15/:30/:45: every other
+    // constant in this file (OFFICE_START/END, LUNCH bounds,
+    // CLASS_BUFFER_MINUTES, the weekly caps) is already a multiple of 15,
+    // and max/min/add/subtract of 15-aligned numbers stays 15-aligned, so
+    // rounding right here is the one place that needs to happen.
+    .map((iv) => ({
+      start: Math.floor(iv.start / 15) * 15,
+      end: Math.ceil(iv.end / 15) * 15,
+    }))
     // Pad each class block by a small buffer on both sides so a shift never
     // starts the instant class ends (or has to end the instant it begins) -
     // clamped to office hours since a buffer past 8-5 has nothing to protect.

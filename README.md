@@ -307,6 +307,22 @@ network access. Time is represented in minutes-since-midnight.
   class begins. It's applied once, at the availability-computation level,
   so every downstream pass (home pool, mixing, Floaters, Back Office,
   the S700 2nd seat) automatically respects it without any special-casing.
+- **Every generated shift starts and ends on a :00/:15/:30/:45 mark.** A raw
+  class time submitted at an odd minute (the student portal's time input has
+  no step restriction, so this can happen) is rounded *outward* to the
+  nearest 15 minutes right in `computeAvailability` â€” start rounds earlier,
+  end rounds later â€” so a class block only ever widens, never narrows,
+  meaning nobody is ever treated as free a few minutes before/after their
+  real class. `resolveMaxWeeklyMinutes` is similarly floored to the nearest
+  15 minutes, so a non-quarter-hour `Max Hours` value never grants more
+  budget than entered. Every other time constant in the file (office hours,
+  lunch window, the buffer, both weekly caps) is already a multiple of 15,
+  and since `max`/`min`/`+`/`-` of 15-aligned numbers stays 15-aligned, these
+  two source-level fixes are what keep *every* downstream boundary aligned â€”
+  no separate rounding pass is needed on the generated output. The student
+  portal's "Unavailable Schedule" time inputs and the manager dashboard's
+  manual shift time inputs both use `step="900"` (15 min) so most entries are
+  already aligned before they ever reach the generator.
 - Runs in eight passes over the whole week, sharing one persistent per-day
   state (availability/usedToday/weeklyMinutes/daysWorked) across all of them:
   **Pass 1a** fills S700 then TLS for every day from home (Primary-Location-
