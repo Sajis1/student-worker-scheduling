@@ -7,8 +7,9 @@ const OFFICE_START = 480; // 8:00 AM, in minutes since midnight
 const OFFICE_END = 1020; // 5:00 PM
 const LUNCH_START = 720; // 12:00 PM
 const LUNCH_END = 780; // 1:00 PM
-const MIN_SHIFT_MINUTES = 240; // 4 hours - a hard constraint, no shift is ever assigned shorter than this
+const MIN_SHIFT_MINUTES = 120; // 2 hours - a hard constraint, no shift is ever assigned shorter than this
 const WEEKLY_CAP_MINUTES = 1200; // 20 hours/week - default cap, used when a student has no valid Max Hours override
+const MIN_WEEKLY_MINUTES = 780; // 13 hours/week - every active student should reach at least this if their own availability and weekly cap allow it (see topUpBelowFloor)
 const CLASS_BUFFER_MINUTES = 15; // small break before/after class, so a shift never starts the instant class ends or ends the instant class starts
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
@@ -189,14 +190,14 @@ function homePool(pool, location) {
 // continuous "clock in, clock out" per day - ctx.usedToday), a student's
 // assignment is truncated so their running weekly total never exceeds the
 // 20-hour cap (ctx.weeklyMinutes), and no assignment is ever shorter than
-// the 4-hour minimum. Mutates seatInstance.gap and the
+// the 2-hour minimum. Mutates seatInstance.gap and the
 // availability/usedToday/weeklyMinutes/daysWorked tracked in ctx as it
 // assigns. `forcedReason`, if given, overrides the auto mix-note (used for
 // the Back Office fallback, which is a real role crossing, not just a
 // location mismatch worth a casual note). When `avoidOrphans` is true (the
 // default for every tier except a seat's absolute last resort), a candidate
 // is skipped ONLY if the 20-hour weekly cap (not their real availability) is
-// what would truncate their assignment short and leave a sub-4-hour,
+// what would truncate their assignment short and leave a sub-2-hour,
 // un-assignable sliver behind - that's a self-inflicted fragment the
 // algorithm can avoid by trying someone else with more budget. A gap caused
 // by a candidate's genuine availability (e.g. a class before or after their
@@ -231,7 +232,7 @@ function fillSeatFromPool(
           if (cappedEnd <= overlap.start) continue;
           const interval = { start: overlap.start, end: cappedEnd };
           const overlapMinutes = interval.end - interval.start;
-          if (overlapMinutes < MIN_SHIFT_MINUTES) continue; // 4-hour hard minimum, no exception
+          if (overlapMinutes < MIN_SHIFT_MINUTES) continue; // 2-hour hard minimum, no exception
           if (avoidOrphans) {
             const wasCapTruncated = cappedEnd < overlap.end;
             const leftoverAfter = gapWindow.end - interval.end;
@@ -285,7 +286,7 @@ function fillSeatFromPool(
 }
 
 // A student's cap for THIS Back Office day: their fair share of remaining
-// weekly budget spread over remaining weekdays (floored at the 4-hour
+// weekly budget spread over remaining weekdays (floored at the 2-hour
 // minimum) - without this, a fully-available student would burn all 20
 // hours in the first 2-3 days and vanish for the rest of the week even
 // though they were still available.
@@ -321,7 +322,7 @@ function assignBackOfficeIndependently(pool, ctx) {
     const cappedEnd = Math.min(longest.end, longest.start + dailyBudget);
     if (cappedEnd <= longest.start) continue;
     const interval = { start: longest.start, end: cappedEnd };
-    if (interval.end - interval.start < MIN_SHIFT_MINUTES) continue; // 4-hour hard minimum
+    if (interval.end - interval.start < MIN_SHIFT_MINUTES) continue; // 2-hour hard minimum
     const reason = isFullOfficeDay(interval) ? 'includes unpaid lunch 12-1 PM (8 hrs counted)' : '';
     generatedRows.push({ studentName: student.name, day, location: 'Back Office', start: interval.start, end: interval.end, reason });
     const workedMinutes = workedMinutesFor(interval);
@@ -332,6 +333,105 @@ function assignBackOfficeIndependently(pool, ctx) {
     assignedIntervals.push(interval);
   }
   return assignedIntervals;
+}
+
+// Attempts one top-up shift for `student` at `location`, from whatever of
+// `gapIntervals` overlaps their real remaining availability that day - picks
+// the LONGEST qualifying overlap (not just the first), same as every other
+// assignment path, capped by `remainingBudget` (the student's own weekly cap,
+// never MIN_WEEKLY_MINUTES - overshooting the floor slightly is fine, going
+// over their cap is not). Returns the assigned interval, or null if nothing
+// at least MIN_SHIFT_MINUTES long is available there. Does not touch
+// seatInstance.gap itself - the caller shrinks that, since Back Office has no
+// gap to shrink (uncapped, always tried against the full office day).
+function assignTopUpShift(student, location, gapIntervals, ctx, remainingBudget, day) {
+  const avail = ctx.getAvailability(student);
+  let best = null;
+  for (const gapWindow of gapIntervals) {
+    for (const iv of avail) {
+      const overlap = intersect(iv, gapWindow);
+      if (!overlap) continue;
+      const cappedEnd = budgetCappedEnd(overlap, remainingBudget);
+      if (cappedEnd <= overlap.start) continue;
+      const minutes = cappedEnd - overlap.start;
+      if (minutes < MIN_SHIFT_MINUTES) continue;
+      if (!best || minutes > best.end - best.start) best = { start: overlap.start, end: cappedEnd };
+    }
+  }
+  if (!best) return null;
+
+  const reason =
+    student.primaryLocation && student.primaryLocation !== location
+      ? student.role === 'Floater' && location !== 'Back Office'
+        ? 'floater: covering Front Desk'
+        : `mix: normally ${student.primaryLocation}`
+      : '';
+  const lunchNote = isFullOfficeDay(best) ? 'includes unpaid lunch 12-1 PM (8 hrs counted)' : '';
+  const fullReason = [reason, 'topping up to weekly minimum', lunchNote].filter(Boolean).join('; ');
+  ctx.generatedRows.push({ studentName: student.name, day, location, start: best.start, end: best.end, reason: fullReason });
+  const workedMinutes = workedMinutesFor(best);
+  ctx.consume(student, best);
+  ctx.usedToday.add(student.name);
+  ctx.daysWorked.set(student.name, (ctx.daysWorked.get(student.name) || 0) + 1);
+  ctx.weeklyMinutes.set(student.name, (ctx.weeklyMinutes.get(student.name) || 0) + workedMinutes);
+  return best;
+}
+
+// Guarantees every active student reaches at least MIN_WEEKLY_MINUTES (13
+// hours), using whatever real availability and remaining weekly-cap budget
+// they still have - runs strictly after every coverage/bonus pass above, so
+// it never takes priority over required seat coverage, only mops up
+// shortfall with what's left. For each day, students still below their own
+// floor (recomputed live, most-behind-first so scarce capacity goes to
+// whoever needs it most) are tried in home-location-first order: their own
+// Front Desk seat if they have one, then the other two Front Desk seats
+// ("move around"), then Back Office last - or Back Office first, then Front
+// Desk, for a student whose home IS Back Office (matches every other pass's
+// "home first" priority). One shift per day is already enforced by
+// ctx.usedToday, which is what naturally spreads a student needing several
+// top-up shifts across multiple different days instead of one day.
+function topUpBelowFloor(students, perDay) {
+  const FRONT_DESK_LOCATIONS = ['S700', 'TLS', 'S701'];
+
+  for (const day of WEEKDAYS) {
+    const { ctx, s700Instance, tlsInstance, s701Instance } = perDay.get(day);
+    const seatByLocation = { S700: s700Instance, TLS: tlsInstance, S701: s701Instance };
+
+    const sorted = [...students].sort(
+      (a, b) => (ctx.weeklyMinutes.get(a.name) || 0) - (ctx.weeklyMinutes.get(b.name) || 0)
+    );
+
+    for (const student of sorted) {
+      if (ctx.usedToday.has(student.name)) continue;
+      const weeklyCap = ctx.maxWeeklyMinutesByStudent.get(student.name) ?? WEEKLY_CAP_MINUTES;
+      const floorMinutes = Math.min(MIN_WEEKLY_MINUTES, weeklyCap);
+      const currentMinutes = ctx.weeklyMinutes.get(student.name) || 0;
+      if (currentMinutes >= floorMinutes) continue;
+      const remainingBudget = weeklyCap - currentMinutes;
+      if (remainingBudget <= 0) continue;
+
+      const home = student.primaryLocation;
+      let order;
+      if (home === 'Back Office') {
+        order = ['Back Office', ...FRONT_DESK_LOCATIONS];
+      } else if (FRONT_DESK_LOCATIONS.includes(home)) {
+        order = [home, ...FRONT_DESK_LOCATIONS.filter((loc) => loc !== home), 'Back Office'];
+      } else {
+        order = [...FRONT_DESK_LOCATIONS, 'Back Office'];
+      }
+
+      for (const location of order) {
+        const gapIntervals = location === 'Back Office' ? [{ start: OFFICE_START, end: OFFICE_END }] : seatByLocation[location].gap;
+        const assigned = assignTopUpShift(student, location, gapIntervals, ctx, remainingBudget, day);
+        if (assigned) {
+          if (location !== 'Back Office') {
+            seatByLocation[location].gap = subtractInterval(seatByLocation[location].gap, assigned);
+          }
+          break;
+        }
+      }
+    }
+  }
 }
 
 // students: [{ name, role: 'Front Desk'|'Back Office'|'Floater', primaryLocation, maxHours }]
@@ -498,8 +598,8 @@ function generateWeeklySchedule({ students, classRows, timeOffRows, manualRows, 
     for (const seatInstance of [s700Instance, tlsInstance]) {
       fillSeatFromPool(seatInstance, backOffice, ctx, 'flex: pulled from Back Office', false);
     }
-    // No short-shift last resort: S700/TLS gaps under 4 hours are always
-    // just left as reported gaps, never filled by anyone under the 4-hour
+    // No short-shift last resort: S700/TLS gaps under 2 hours are always
+    // just left as reported gaps, never filled by anyone under the 2-hour
     // minimum. This used to have a "waive the minimum" exception here, but
     // fillSeatFromPool's greedy while-loop doesn't stop after one pick - it
     // kept looping and fragmenting a single leftover gap across several
@@ -582,6 +682,15 @@ function generateWeeklySchedule({ students, classRows, timeOffRows, manualRows, 
       true
     );
   }
+
+  // Pass 5: guarantee every active student reaches the 13-hour weekly floor
+  // (MIN_WEEKLY_MINUTES) if their own availability and weekly cap allow it -
+  // home location tried first, then the rest of Front Desk, then Back
+  // Office, mirroring the "stay home, only move around as a fallback"
+  // priority used everywhere above. Runs last on purpose: it only spends
+  // whatever real capacity every required/bonus pass above didn't already
+  // claim, never at the expense of required seat coverage.
+  topUpBelowFloor([...frontDesk, ...backOffice, ...floaters], perDay);
 
   // Anything still uncovered is reported, not silently dropped.
   for (const day of WEEKDAYS) {
@@ -683,6 +792,7 @@ module.exports = {
   OFFICE_START,
   OFFICE_END,
   MIN_SHIFT_MINUTES,
+  MIN_WEEKLY_MINUTES,
   WEEKDAYS,
   parseTimeToMinutes,
   formatMinutesToTime,
