@@ -388,16 +388,26 @@ network access. Time is represented in minutes-since-midnight.
   exactly matches the seat's whole remaining gap window (`closesGapFully`)
   always wins, even over someone who's worked fewer days so far â€” S700/TLS
   actually having zero gaps every day matters more than an evenly-spread
-  roster. Only when nobody can achieve full closure does the tie-break fall
-  back to **whoever has worked fewer days so far this week**, and only after
-  that does raw overlap length matter. This is what spreads the roster across
-  all 5 days when a single person genuinely can't cover a whole day alone,
-  while still handing an entire day to one fully-available person when that's
-  what it takes to avoid a gap. Concretely: on a day where one student
-  (S701-primary, say) has zero classes and could single-handedly cover TLS
-  8 AMâ€“5 PM, they now win that day even if they already worked Monday and
-  Tuesday â€” beating two other partially-available students who'd each leave
-  a stub of the day uncovered if picked instead.
+  roster. **Short of full closure, a candidate who can offer at least
+  `PREFERRED_SHIFT_MINUTES` (4 hours) of the current gap outranks one who'd
+  only offer a bare-minimum sliver â€” even if the sliver-candidate has worked
+  fewer days so far.** Per manager direction: this is what keeps a day that
+  needs more than one person built from a couple of solid ~4-hour-or-more
+  shifts instead of fragmenting into several bare-2-hour ones whenever a
+  bigger contribution was genuinely available. It never truncates anyone's
+  real availability short to hit this â€” a candidate still always gets their
+  full available overlap (or more); it only changes who gets *picked* first
+  among competing candidates. Only **within** the same tier (both candidates
+  â‰¥4 hours, or both under it) does the tie-break fall back to **whoever has
+  worked fewer days so far this week**, and only after that does raw overlap
+  length matter. This is what spreads the roster across all 5 days when
+  nobody in a tier can cover more, while still handing an entire day to one
+  fully-available person when that's what it takes to avoid a gap.
+  Concretely: on a day where one student (S701-primary, say) has zero
+  classes and could single-handedly cover TLS 8 AMâ€“5 PM, they now win that
+  day even if they already worked Monday and Tuesday â€” beating two other
+  partially-available students who'd each leave a stub of the day uncovered
+  if picked instead.
 - **Any candidate whose available overlap is under 2 hours (120 minutes) is
   skipped entirely** for that pick â€” a gap either gets a real 2+ hour shift or
   stays a reported gap, never a shorter filler shift, no exceptions.

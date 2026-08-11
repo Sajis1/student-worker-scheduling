@@ -195,19 +195,36 @@ function buildManualOccupancy(manualRows) {
   return { byStudent, bySeat };
 }
 
+// Preferred shift length when a candidate can't close the whole gap alone -
+// per manager direction: aim for ~4-hour chunks over the bare 2-hour
+// minimum whenever a candidate can genuinely offer that much, so a day that
+// needs more than one person splits into a couple of solid shifts instead of
+// several bare-minimum slivers. This never truncates anyone's real
+// availability short - a candidate still always gets their full available
+// overlap (or more, if that's what they have and need); it only changes who
+// gets PICKED first when multiple candidates are competing for the same gap.
+const PREFERRED_SHIFT_MINUTES = 240;
+
 // Full, gap-free coverage beats everything else - a candidate who can close
 // the ENTIRE current gap alone always wins, even over someone who's worked
-// fewer days so far. Only when nobody can achieve full closure does "fewer
-// days worked wins" take over as the deciding factor (which is what spreads
-// the roster across the week when a single person genuinely can't cover a
-// whole day); overlap length is the last tie-break. This ordering matters:
-// without the closure bonus, a fully-available student who already worked a
-// couple of days could lose out to two partially-available fresher students
-// who'd each leave a stub of the day uncovered - full coverage is worth
-// more than an even week for the seats that need to be covered every day.
+// fewer days so far. Short of that, a candidate who can offer at least
+// PREFERRED_SHIFT_MINUTES (4 hours) of the current gap outranks one who'd
+// only offer a bare-minimum sliver, even if the sliver-candidate has worked
+// fewer days so far - this is what keeps a fragmented day built from a
+// couple of solid ~4-hour-or-more shifts instead of several 2-hour slivers
+// when a bigger contribution was genuinely available. Only WITHIN the same
+// tier (both candidates >=4 hours, or both under it) does "fewer days
+// worked wins" take over as the tie-break (which is what spreads the roster
+// across the week when nobody in that tier can cover more); overlap length
+// is the last tie-break. This ordering matters: without the closure bonus, a
+// fully-available student who already worked a couple of days could lose
+// out to two partially-available fresher students who'd each leave a stub
+// of the day uncovered - full coverage is worth more than an even week for
+// the seats that need to be covered every day.
 function candidateScore(overlapMinutes, daysWorkedSoFar, closesGapFully) {
   const closureBonus = closesGapFully ? 100000000 : 0;
-  return closureBonus - daysWorkedSoFar * 100000 + overlapMinutes;
+  const targetBonus = overlapMinutes >= PREFERRED_SHIFT_MINUTES ? 1000000 : 0;
+  return closureBonus + targetBonus - daysWorkedSoFar * 100000 + overlapMinutes;
 }
 
 // Students whose Primary Location is this seat - the "stay home" tier tried
