@@ -250,17 +250,19 @@ the full mixed pool) can cover the gap. **S701 is never backed up by regular
 Back Office** â€” if nobody's available for it, it's reported as an uncovered
 gap, unless a Floater can cover it (see below).
 
-**Floaters** are students cross-trained for both areas (e.g. Samantha).
+**Floaters** are students cross-trained for Front Desk (e.g. Samantha).
 Unlike regular Back Office students, a Floater is eligible to help cover
 *any* Front Desk seat â€” including S701, which regular Back Office never
-touches. A Floater's default resting place is Back Office, same as everyone
-else with no Front Desk shift that day. **A Floater is strictly lower
-priority than a regular Front Desk student for mixing** â€” a Floater only
-gets pulled to Front Desk once no regular Front Desk student (home or mixed)
-can cover the gap; otherwise they just stay on Back Office duty. This is the
-intended way to get S701 backup without loosening the rule for staff who
-aren't cross-trained for the front desk: mark only the students who actually
-are as "Floater," not everyone in Back Office.
+touches. **A Floater is strictly lower priority than a regular Front Desk
+student for mixing** â€” a Floater only gets pulled to Front Desk once no
+regular Front Desk student (home or mixed) can cover the gap. Per manager
+direction, **Floaters are Front-Desk-only backup and are never assigned to
+Back Office**, including as a default resting duty on days Front Desk
+doesn't need them â€” a day with no Front Desk gap for a Floater to cover is
+simply a day they aren't scheduled at all. This is the intended way to get
+S701 backup without loosening the rule for staff who aren't cross-trained
+for the front desk: mark only the students who actually are as "Floater,"
+not everyone in Back Office.
 
 **Semester schedule generation order:**
 1. Read every student's class schedule (whether or not they've actually
@@ -483,11 +485,13 @@ network access. Time is represented in minutes-since-midnight.
   > needed every week.
 - **Back Office is NOT a shared "stop once someone covers it" gap like the
   Front Desk seats** â€” it has no seat-capacity limit at all. Every available
-  Back Office/Floater student gets their own independent slot via
+  Back Office student gets their own independent slot via
   `assignBackOfficeIndependently()`, and multiple students overlapping in
   time is expected and encouraged, not something the generator tries to
   avoid. This maximizes how close everyone gets to their 20-hour cap, rather
-  than stopping at the minimum needed to keep one person present.
+  than stopping at the minimum needed to keep one person present. Floaters
+  are not passed into this function (per manager direction, they're Front-
+  Desk-only backup now).
 - **Back Office day-spreading uses a different mechanism than Front Desk**:
   `backOfficeDailyBudget()` caps each student's *own* daily pick at their
   fair daily share (remaining weekly budget Ã· remaining weekdays, floored at
@@ -503,8 +507,8 @@ network access. Time is represented in minutes-since-midnight.
 - After independent assignment, whatever stretch of the day nobody happened
   to cover is still surfaced in `gaps[]` â€” informational only, it never
   limits or gates who gets scheduled. A Back Office gap most often just means
-  there weren't enough Back Office/Floater students with availability at
-  that specific hour, not that the generator held anyone back.
+  there weren't enough Back Office students with availability at that
+  specific hour, not that the generator held anyone back.
 - **Pass 4 fills S700's 2nd physical seat, strictly after every other pass**,
   from the full combined roster (`frontDesk + floaters + backOffice`), using
   a different scoring mode entirely: `fillSeatFromPool`'s `maximizeUnderutilized`

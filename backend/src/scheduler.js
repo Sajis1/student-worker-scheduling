@@ -385,10 +385,12 @@ function backOfficeDailyBudget(studentName, ctx) {
 }
 
 // Back Office has NO seat cap and is NOT a "stop once someone covers it"
-// shared gap like Front Desk seats - every available Back Office/Floater
-// student gets their OWN independent slot (multiple people overlapping in
-// time is expected and fine, not something to avoid), maximizing everyone's
-// hours toward the 20-hour cap rather than minimizing to bare coverage.
+// shared gap like Front Desk seats - every available Back Office student
+// gets their OWN independent slot (multiple people overlapping in time is
+// expected and fine, not something to avoid), maximizing everyone's hours
+// toward the 20-hour cap rather than minimizing to bare coverage. Floaters
+// are never passed to this function (per manager direction, they're Front-
+// Desk-only backup now).
 // Returns the assigned intervals so the caller can compute - for visibility
 // only, not to gate further assignment - whatever stretch of the day nobody
 // ended up covering.
@@ -498,7 +500,14 @@ function topUpBelowFloor(students, perDay) {
 
       const home = student.primaryLocation;
       let order;
-      if (home === 'Back Office') {
+      if (student.role === 'Floater') {
+        // Floaters are Front-Desk-only backup now (per manager direction) -
+        // never Back Office, even if their own Primary Location says Back
+        // Office (their old default resting seat, no longer used).
+        order = home && FRONT_DESK_LOCATIONS.includes(home)
+          ? [home, ...FRONT_DESK_LOCATIONS.filter((loc) => loc !== home)]
+          : FRONT_DESK_LOCATIONS;
+      } else if (home === 'Back Office') {
         order = ['Back Office', ...FRONT_DESK_LOCATIONS];
       } else if (FRONT_DESK_LOCATIONS.includes(home)) {
         order = [home, ...FRONT_DESK_LOCATIONS.filter((loc) => loc !== home), 'Back Office'];
@@ -541,8 +550,10 @@ function generateWeeklySchedule({ students, classRows, timeOffRows, manualRows, 
   const floaters = students.filter((s) => s.role === 'Floater');
   // Floaters are a distinct, strictly-lower-priority tier than regular Front
   // Desk mixing: a Floater only gets pulled to Front Desk once no regular
-  // Front Desk student (home or mixed) can cover the gap - otherwise a
-  // Floater just stays on their own Back Office default duty.
+  // Front Desk student (home or mixed) can cover the gap. Per manager
+  // direction, Floaters are Front-Desk-only backup now (S700/TLS/S701) -
+  // they're never assigned to Back Office, including as a default resting
+  // duty on days Front Desk doesn't need them.
 
   const generatedRows = [];
   const gaps = [];
@@ -735,18 +746,20 @@ function generateWeeklySchedule({ students, classRows, timeOffRows, manualRows, 
     fillSeatFromPool(s701Instance, floaters, ctx, undefined, false);
   }
 
-  // Pass 3: every available Back Office/Floater student gets their OWN
-  // independent slot (not a shared gap that stops once "someone" covers it)
-  // - multiple people at once is fine and expected, and this is what lets
-  // everyone actually reach toward their 20-hour cap instead of being
-  // crowded out by whoever got picked first. Day-share capped so nobody
-  // front-loads their whole week into 2-3 days. `backOfficeInstance.gap` is
-  // reduced by whatever got assigned purely so any stretch nobody ended up
-  // covering can still be surfaced below - it never blocks or limits who
-  // gets scheduled.
+  // Pass 3: every available Back Office student gets their OWN independent
+  // slot (not a shared gap that stops once "someone" covers it) - multiple
+  // people at once is fine and expected, and this is what lets everyone
+  // actually reach toward their 20-hour cap instead of being crowded out by
+  // whoever got picked first. Day-share capped so nobody front-loads their
+  // whole week into 2-3 days. `backOfficeInstance.gap` is reduced by
+  // whatever got assigned purely so any stretch nobody ended up covering can
+  // still be surfaced below - it never blocks or limits who gets scheduled.
+  // Floaters are NOT included here (per manager direction) - they're
+  // Front-Desk-only backup now (S700/TLS/S701, see Pass 1b/2b above), never
+  // Back Office duty.
   for (const day of WEEKDAYS) {
     const { ctx, backOfficeInstance } = perDay.get(day);
-    const assigned = assignBackOfficeIndependently([...backOffice, ...floaters], ctx);
+    const assigned = assignBackOfficeIndependently(backOffice, ctx);
     backOfficeInstance.gap = subtractIntervals(backOfficeInstance.gap, assigned);
   }
 
