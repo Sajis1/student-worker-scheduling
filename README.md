@@ -231,6 +231,19 @@ S700/TLS/S701 is a fallback, not a default â€” a student only gets moved of
 their home seat once their home seat's own students genuinely can't cover a
 gap. A row gets a `mix: normally X` note whenever this fallback fires.
 
+**No more than a handful of different people cover the same seat on the same
+day.** Per manager direction, after S700 fragmented into 4+ different people
+each covering a sliver of one day: **S700 caps out at 3 distinct people per
+day, TLS and S701 at 2.** Once a seat hits its cap for that day, no further
+new person is added even if a real gap remains â€” the remainder is left as a
+reported gap instead. S700 gets the most headroom since it's the seat that
+most needs full coverage; a short (1-2 hour) gap at TLS or S701 some days is
+an accepted tradeoff for keeping fewer people rotating through. This cap
+applies everywhere a person could be added to one of these three seats
+(home, mixing, Floaters, Back Office cascade, the bonus 2nd S700 seat, and
+the 13-hour floor top-up below) â€” Back Office itself has no cap, since it
+was never a "stop once someone covers it" seat to begin with.
+
 **Coverage cascade** â€” S700 and TLS can additionally pull in a Back Office
 student as the true last resort, once no Front Desk student (home first, then
 the full mixed pool) can cover the gap. **S701 is never backed up by regular
@@ -339,6 +352,17 @@ network access. Time is represented in minutes-since-midnight.
   in a given pass chain â€” the Back Office cascade for S700/TLS, and the
   Floater tier for S701 â€” so a real gap still gets *something* rather than
   staying open once nothing better remains to try.
+- **`SEAT_DAILY_HEADCOUNT_CAP` (`{ S700: 3, TLS: 2, S701: 2 }`) and
+  `seatAtHeadcountCap()` are the per-day fragmentation guard**: at the top of
+  every `fillSeatFromPool` while-loop iteration, and before trying a
+  Front Desk location in the floor top-up pass, the generator counts distinct
+  `studentName`s already in `generatedRows` for that (day, location) pair â€”
+  since one-shift-per-day means each row is a different person â€” and stops
+  adding anyone new once the cap is hit, regardless of whether real gap
+  remains. Any candidate that reaches the scoring stage is guaranteed to be a
+  *new* person for that seat (`usedToday` already excludes anyone assigned
+  anywhere else that day), so this single check is sufficient to cap it.
+  Back Office has no entry in the table and is therefore never capped.
 - **A student with a Role that isn't exactly "Front Desk", "Back Office", or
   "Floater" (including blank) is silently excluded from scheduling** and
   surfaced in the response's `warnings[]` array by name, rather than causing

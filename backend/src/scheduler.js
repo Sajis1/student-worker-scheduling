@@ -13,6 +13,18 @@ const MIN_WEEKLY_MINUTES = 780; // 13 hours/week - every active student should r
 const CLASS_BUFFER_MINUTES = 15; // small break before/after class, so a shift never starts the instant class ends or ends the instant class starts
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
+// Max distinct students that can appear at a Front Desk seat on any ONE day -
+// per manager direction, after seeing S700 fragment into 4+ different people
+// covering slivers of a single day. Once a seat hits its cap for the day, no
+// further NEW person is added even if gap remains; the remainder is left as
+// a reported gap rather than pulling in another person. S700 gets the most
+// headroom since it's the seat that most needs full coverage; TLS/S701 are
+// tighter, so a short (1-2 hour) gap there some days is an accepted tradeoff
+// for keeping fewer people rotating through. Back Office has no entry here
+// (and therefore no cap) - it was never a "stop once someone covers it" seat
+// to begin with. Not consulted for who to schedule, only when to stop.
+const SEAT_DAILY_HEADCOUNT_CAP = { S700: 3, TLS: 2, S701: 2 };
+
 // A shift spanning the full 8am-5pm office day includes a mandatory unpaid
 // 1-hour lunch break. The displayed block stays one continuous row (the
 // student isn't actually pulled off the schedule for it) - only the worked
@@ -184,6 +196,31 @@ function homePool(pool, location) {
   return pool.filter((s) => s.primaryLocation === location);
 }
 
+// How many DISTINCT students already have a row at `location` on `day` -
+// since one-shift-per-day means each person contributes at most one row per
+// seat per day, this is just a count of unique studentName among that day's
+// rows for that seat, checked live against whatever's been generated so far
+// (including by earlier passes/seat instances for the same location, e.g.
+// Pass 4's separate S700-2nd-seat instance still counts toward S700's total).
+function seatHeadcountToday(generatedRows, day, location) {
+  const names = new Set();
+  for (const row of generatedRows) {
+    if (row.day === day && row.location === location) names.add(row.studentName);
+  }
+  return names.size;
+}
+
+// True once `location` has already reached its SEAT_DAILY_HEADCOUNT_CAP for
+// `day` - locations with no entry in that table (Back Office) are never
+// capped. Every candidate reaching this check is guaranteed to be a NEW
+// person for the seat (usedToday already excludes anyone assigned anywhere
+// today), so this is the single place fragmentation gets stopped.
+function seatAtHeadcountCap(generatedRows, day, location) {
+  const cap = SEAT_DAILY_HEADCOUNT_CAP[location];
+  if (!cap) return false;
+  return seatHeadcountToday(generatedRows, day, location) >= cap;
+}
+
 // Greedily fills a seat instance's remaining gap from a pool of students,
 // picking the best-scoring candidate each round. Hard constraints enforced
 // here, all via ctx: a student can be assigned at most ONCE per day (one
@@ -217,6 +254,11 @@ function fillSeatFromPool(
   let progressed = true;
   while (progressed) {
     progressed = false;
+    // Fragmentation guard: once this seat already has its cap's worth of
+    // distinct people for today, stop - any candidate found below would
+    // necessarily be a new (cap-busting) person, so the rest of the gap (if
+    // any) is left as a reported gap instead of pulling in one more person.
+    if (seatAtHeadcountCap(generatedRows, day, seatInstance.location)) break;
     for (const gapWindow of [...seatInstance.gap]) {
       let best = null;
       let bestScore = -Infinity;
@@ -421,6 +463,9 @@ function topUpBelowFloor(students, perDay) {
       }
 
       for (const location of order) {
+        // Same fragmentation guard as fillSeatFromPool: never make this
+        // student the seat's 4th (S700) or 3rd (TLS/S701) person for today.
+        if (location !== 'Back Office' && seatAtHeadcountCap(ctx.generatedRows, day, location)) continue;
         const gapIntervals = location === 'Back Office' ? [{ start: OFFICE_START, end: OFFICE_END }] : seatByLocation[location].gap;
         const assigned = assignTopUpShift(student, location, gapIntervals, ctx, remainingBudget, day);
         if (assigned) {
