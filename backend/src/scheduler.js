@@ -14,23 +14,16 @@ const CLASS_BUFFER_MINUTES = 15; // small break before/after class, so a shift n
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
 // Max distinct students that can appear at a Front Desk seat on any ONE day -
-// per manager direction, after seeing S700 fragment into 5+ different people
-// covering slivers of a single day. This is a CEILING, not a target: the
-// existing scoring already prefers fewer, longer shifts on its own (a
-// candidate who can close the whole remaining gap always wins over one who'd
-// only cover part of it, and every candidate gets the longest overlap their
-// real availability allows, never truncated to the 2-hour minimum unless
-// that's genuinely all they have) - this cap only stops it from reaching for
-// a 5th person when 4 genuinely can't be avoided. Once a seat hits its cap
-// for the day, no further NEW person is added even if gap remains; the
-// remainder is left as a reported gap rather than pulling in another person.
-// S700 gets the most headroom since it's the seat that most needs full
-// coverage; TLS/S701 are tighter, so a short (1-2 hour) gap there some days
-// is an accepted tradeoff for keeping fewer people rotating through. Back
-// Office has no entry here (and therefore no cap) - it was never a "stop
-// once someone covers it" seat to begin with. Not consulted for who to
-// schedule, only when to stop.
-const SEAT_DAILY_HEADCOUNT_CAP = { S700: 4, TLS: 2, S701: 2 };
+// per manager direction, after seeing S700 fragment into 4+ different people
+// covering slivers of a single day. Once a seat hits its cap for the day, no
+// further NEW person is added even if gap remains; the remainder is left as
+// a reported gap rather than pulling in another person. S700 gets the most
+// headroom since it's the seat that most needs full coverage; TLS/S701 are
+// tighter, so a short (1-2 hour) gap there some days is an accepted tradeoff
+// for keeping fewer people rotating through. Back Office has no entry here
+// (and therefore no cap) - it was never a "stop once someone covers it" seat
+// to begin with. Not consulted for who to schedule, only when to stop.
+const SEAT_DAILY_HEADCOUNT_CAP = { S700: 3, TLS: 2, S701: 2 };
 
 // A shift spanning the full 8am-5pm office day includes a mandatory unpaid
 // 1-hour lunch break. The displayed block stays one continuous row (the
