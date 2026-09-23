@@ -1,8 +1,6 @@
 # Student Worker Scheduling & Management System
 
-Internal tool for the UHD PMO (Project Management Office) to manage student worker
-class schedules, time-off requests, and (in later phases) work schedule generation.
-
+A full-stack scheduling and workforce management system built for the University of Houston-Downtown Project Management Office to help manage student availability, class conflicts, time-off requests, weekly hour limits, and work schedule generation. The system uses a Node.js/Express backend, the Smartsheet API as its data source, and a custom scheduling algorithm that considers availability, role, location, coverage needs, and weekly work limits. It is deployed on Vercel and designed around real scheduling workflows used by students and managers.
 ## Architecture
 
 - **Smartsheet is the single source of truth.** There is no separate database.
