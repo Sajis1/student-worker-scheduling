@@ -2,6 +2,15 @@
 // sessionStorage after being picked from the Student Master dropdown.
 const STORAGE_KEY = 'uhd-student-worker-name';
 
+// Paste the embed URL for the student tutorial video here to show the
+// "Watch tutorial" button on the Unavailable Schedule tab. Leave '' to hide it.
+// (manager.js has its own, separate TUTORIAL_VIDEO_URL for the dashboard video -
+// same copy-paste-not-imported situation as SEMESTER_TERMS.)
+//   YouTube (unlisted):            https://www.youtube.com/embed/VIDEO_ID
+//   Microsoft Stream / SharePoint: the src="" URL from its "Embed" <iframe> snippet
+//   Vimeo:                         https://player.vimeo.com/video/VIDEO_ID
+const TUTORIAL_VIDEO_URL = '';
+
 const pickerSection = document.getElementById('picker-section');
 const portalSection = document.getElementById('portal-section');
 const studentSelect = document.getElementById('student-select');
@@ -308,6 +317,14 @@ function showStatus(el, message, kind) {
   el.textContent = message;
   el.hidden = false;
   el.className = `status ${kind}`;
+}
+
+// Show the "Watch tutorial" button only once a video URL has been configured.
+const tutorialBtn = document.getElementById('tutorial-btn');
+if (TUTORIAL_VIDEO_URL) {
+  tutorialBtn.hidden = false;
+  tutorialBtn.addEventListener('click', () =>
+    showVideoModal(TUTORIAL_VIDEO_URL, 'How to submit your Unavailable Schedule'));
 }
 
 // --- Init ---

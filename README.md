@@ -740,6 +740,32 @@ below â€” nothing spans across the gap between them:
 - The Supervisors sheet's contact list (same list, repeated under both boxes)
 - A "Last Updated" timestamp
 
+## Tutorial videos
+
+Both pages have a **"Watch tutorial" button** that opens a video in a popup
+(`showVideoModal()` in `frontend/js/modal.js` - plain DOM, not a real popup
+window, since `window.open()` is blocked in the embedded Teams tab).
+
+- Student portal: button on the Unavailable Schedule tab.
+- Manager dashboard: button in the header.
+
+The video is **not stored in this repo** (recordings are far too large for git
+/ Vercel). Upload each recording to a host that serves without a login -
+**unlisted YouTube** is the simplest; Microsoft Stream / SharePoint works too
+but forces a Microsoft sign-in for anyone opening the site outside Teams, so
+only use it if the recording shows real student data on screen. Then paste the
+embed URL into the `TUTORIAL_VIDEO_URL` constant near the top of the page's JS
+file:
+
+- Student video -> `frontend/js/app.js`
+- Manager video -> `frontend/js/manager.js`
+
+(Two separate constants, copy-pasted not imported - same no-shared-module
+situation as `SEMESTER_TERMS`.) Embed-URL shapes: YouTube
+`https://www.youtube.com/embed/VIDEO_ID`, Vimeo
+`https://player.vimeo.com/video/VIDEO_ID`, Stream/SharePoint the `src="..."`
+from its "Embed" snippet. Leave the constant `''` and the button stays hidden.
+
 ## What's NOT done yet
 
 - The scheduling algorithm is a greedy heuristic, not a globally-optimal
