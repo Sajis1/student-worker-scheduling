@@ -3,7 +3,7 @@
 const STORAGE_KEY = 'uhd-student-worker-name';
 
 // Paste the embed URL for the student tutorial video here to show the
-// "Watch tutorial" button on the Unavailable Schedule tab. Leave '' to hide it.
+// "Watch tutorial" button on the "Who are you?" landing page. Leave '' to hide it.
 // (manager.js has its own, separate TUTORIAL_VIDEO_URL for the dashboard video -
 // same copy-paste-not-imported situation as SEMESTER_TERMS.)
 //   YouTube (unlisted):            https://www.youtube.com/embed/VIDEO_ID
@@ -324,7 +324,7 @@ const tutorialBtn = document.getElementById('tutorial-btn');
 if (TUTORIAL_VIDEO_URL) {
   tutorialBtn.hidden = false;
   tutorialBtn.addEventListener('click', () =>
-    showVideoModal(TUTORIAL_VIDEO_URL, 'How to submit your Unavailable Schedule'));
+    showVideoModal(TUTORIAL_VIDEO_URL, 'How to use the student portal'));
 }
 
 // --- Init ---

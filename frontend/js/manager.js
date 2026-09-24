@@ -827,10 +827,11 @@ document.getElementById('refresh-class-schedule-btn').addEventListener('click', 
 document.getElementById('shift-form').addEventListener('submit', handleShiftFormSubmit);
 document.getElementById('shift-cancel-btn').addEventListener('click', resetShiftForm);
 
-// Show the "Watch tutorial" button only once a video URL has been configured.
+// Show the tutorial banner only once a video URL has been configured.
+const tutorialBanner = document.getElementById('tutorial-banner');
 const tutorialBtn = document.getElementById('tutorial-btn');
 if (TUTORIAL_VIDEO_URL) {
-  tutorialBtn.hidden = false;
+  tutorialBanner.hidden = false;
   tutorialBtn.addEventListener('click', () =>
     showVideoModal(TUTORIAL_VIDEO_URL, 'Manager Dashboard tutorial'));
 }

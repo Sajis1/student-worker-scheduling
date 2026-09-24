@@ -23,6 +23,12 @@
     <section id="picker-section" class="card">
       <h2>Who are you?</h2>
       <p class="hint">Pick your name from the list below. Only active student workers appear here.</p>
+
+      <button type="button" id="tutorial-btn" class="tutorial-btn" hidden>
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M4 2.5v11a1 1 0 0 0 1.5.87l9-5.5a1 1 0 0 0 0-1.74l-9-5.5A1 1 0 0 0 4 2.5Z"/></svg>
+        Watch tutorial
+      </button>
+
       <label for="student-select">Student name</label>
       <select id="student-select">
         <option value="">Loading students...</option>
@@ -41,11 +47,6 @@
       <section id="tab-class-schedule" class="tab-panel card">
         <h2 id="class-schedule-form-title">My Unavailable Schedule</h2>
         <p class="hint">Add every time block you're unavailable to work (classes, etc). Managers only see the day and time - course/notes is optional, so you never have to share what the class actually is.</p>
-
-        <button type="button" id="tutorial-btn" class="tutorial-btn" hidden>
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M4 2.5v11a1 1 0 0 0 1.5.87l9-5.5a1 1 0 0 0 0-1.74l-9-5.5A1 1 0 0 0 4 2.5Z"/></svg>
-          Watch tutorial
-        </button>
 
         <form id="class-schedule-form">
           <input type="hidden" id="cs-rowid" />

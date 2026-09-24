@@ -454,17 +454,54 @@ tbody tr:hover {
   flex-shrink: 0;
 }
 
-/* Variant for the manager header, which sits on the navy gradient. */
-.tutorial-btn-on-brand {
-  background: rgba(255, 255, 255, 0.12);
+/* Prominent banner version, for the manager dashboard - sits above every
+   other card so it's the first thing a manager sees, not a small button
+   tucked into the header. */
+.tutorial-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%);
   color: white;
-  border-color: rgba(255, 255, 255, 0.4);
-  margin-top: 0;
+  border-radius: 12px;
+  padding: 1.1rem 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 4px 16px rgba(20, 38, 71, 0.25);
 }
 
-.tutorial-btn-on-brand:hover {
-  background: rgba(255, 255, 255, 0.22);
-  border-color: white;
+.tutorial-banner-text {
+  margin: 0;
+  font-size: 0.98rem;
+}
+
+.tutorial-banner-text strong {
+  font-family: var(--font-heading);
+  font-size: 1.05rem;
+}
+
+.tutorial-btn-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-shrink: 0;
+  background: white;
+  color: var(--brand-dark);
+  border: none;
+  padding: 0.65rem 1.4rem;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 0.92rem;
+  font-weight: 700;
+  font-family: inherit;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.tutorial-btn-cta:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
 }
 
 .app-modal-overlay-video {
