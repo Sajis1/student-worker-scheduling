@@ -9,7 +9,7 @@ const STORAGE_KEY = 'uhd-student-worker-name';
 //   YouTube (unlisted):            https://www.youtube.com/embed/VIDEO_ID
 //   Microsoft Stream / SharePoint: the src="" URL from its "Embed" <iframe> snippet
 //   Vimeo:                         https://player.vimeo.com/video/VIDEO_ID
-const TUTORIAL_VIDEO_URL = '';
+const TUTORIAL_VIDEO_URL = 'https://www.youtube.com/embed/InAngv678Ns';
 
 const pickerSection = document.getElementById('picker-section');
 const portalSection = document.getElementById('portal-section');
