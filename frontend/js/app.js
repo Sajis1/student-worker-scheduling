@@ -7,9 +7,11 @@ const STORAGE_KEY = 'uhd-student-worker-name';
 // (manager.js has its own, separate TUTORIAL_VIDEO_URL for the dashboard video -
 // same copy-paste-not-imported situation as SEMESTER_TERMS.)
 //   YouTube (unlisted):            https://www.youtube.com/embed/VIDEO_ID
+//   Panopto:                       same id as the Viewer.aspx share link, with
+//                                   Viewer.aspx swapped for Embed.aspx
 //   Microsoft Stream / SharePoint: the src="" URL from its "Embed" <iframe> snippet
 //   Vimeo:                         https://player.vimeo.com/video/VIDEO_ID
-const TUTORIAL_VIDEO_URL = 'https://www.youtube.com/embed/InAngv678Ns';
+const TUTORIAL_VIDEO_URL = 'https://uhdowntown.hosted.panopto.com/Panopto/Pages/Embed.aspx?id=ac12d34a-84d2-417d-8451-b4f000f26f61';
 
 const pickerSection = document.getElementById('picker-section');
 const portalSection = document.getElementById('portal-section');
