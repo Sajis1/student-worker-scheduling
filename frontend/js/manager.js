@@ -8,12 +8,14 @@ const LOCATIONS = ['S700', 'TLS', 'S701', 'Back Office'];
 const SEAT_CAPACITY = { S700: 2, TLS: 1, S701: 1, 'Back Office': Infinity };
 
 // Paste the embed URL for the manager tutorial video here to show the
-// "Watch tutorial" button in the dashboard header. Leave '' to hide it.
+// tutorial banner at the top of the dashboard. Leave '' to hide it.
 // (app.js has its own, separate TUTORIAL_VIDEO_URL for the student portal video.)
 //   YouTube (unlisted):            https://www.youtube.com/embed/VIDEO_ID
+//   Panopto:                       same id as the Viewer.aspx share link, with
+//                                   Viewer.aspx swapped for Embed.aspx
 //   Microsoft Stream / SharePoint: the src="" URL from its "Embed" <iframe> snippet
 //   Vimeo:                         https://player.vimeo.com/video/VIDEO_ID
-const TUTORIAL_VIDEO_URL = 'https://www.youtube.com/embed/1eM_15r19UE';
+const TUTORIAL_VIDEO_URL = 'https://uhdowntown.hosted.panopto.com/Panopto/Pages/Embed.aspx?id=f99120ee-a6cd-46e1-833f-b4f000ea5461';
 
 let currentWorkScheduleRows = [];
 let currentRoster = []; // [{name, role, primaryLocation, active, maxHours, extension, phone}] - populated by loadRoster(), reused by the Excel export to split by Role
