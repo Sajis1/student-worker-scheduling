@@ -67,7 +67,26 @@ function appAlert(message) {
 //   Microsoft Stream / SharePoint:  the src="" URL from its Embed <iframe> snippet
 //   Vimeo:  https://player.vimeo.com/video/VIDEO_ID
 // Closing the modal blanks the iframe, which stops playback.
+//
+// Exception: when this app is itself running inside an iframe (the Teams
+// tab case), putting the video in a *second*, nested iframe breaks hosts
+// like Panopto whose player needs a top-level sign-in/SSO redirect - that
+// redirect can't complete inside a sandboxed grandchild frame, so the video
+// silently never loads even though the exact same embed works fine in a
+// normal browser tab. Detect that case and hand off to a real link click
+// instead, which Teams does let escape the tab's iframe into the browser.
 function showVideoModal(embedUrl, title) {
+  if (window.self !== window.top) {
+    const link = document.createElement('a');
+    link.href = embedUrl;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    return;
+  }
+
   const root = ensureModalRoot();
   root.innerHTML = `
     <div class="app-modal-overlay app-modal-overlay-video">
