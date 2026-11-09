@@ -113,30 +113,52 @@ function to24Hour(time12) {
   return `${String(h).padStart(2, '0')}:${m}`;
 }
 
+// All of the student's class-schedule rows across every semester they've
+// ever entered - nothing is ever deleted when they move to a new semester.
+// What changes is only which slice of this the table below shows (see
+// renderClassScheduleTable): it's always filtered to whichever semester the
+// "Semester" field above is currently set to. That's what keeps an old
+// semester's entries from "stacking up" visibly alongside a new one, while
+// still showing them again the moment the student switches back to it.
+let classScheduleRows = [];
+
+function renderClassScheduleTable() {
+  const viewSemester = document.getElementById('cs-semester').value;
+  const rows = classScheduleRows.filter((row) => row['Semester'] === viewSemester);
+  classScheduleTableBody.innerHTML = '';
+  rows.forEach((row) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${row['Day'] || ''}</td>
+      <td>${row['Start Time'] || ''}</td>
+      <td>${row['End Time'] || ''}</td>
+      <td>${row['Semester'] || ''}</td>
+      <td>${row['Expected Grad'] || ''}</td>
+      <td class="row-actions">
+        <button type="button" class="edit-class-btn">Edit</button>
+        <button type="button" class="duplicate-class-btn">Duplicate</button>
+        <button type="button" class="delete-class-btn">Delete</button>
+      </td>
+    `;
+    tr.querySelector('.edit-class-btn').addEventListener('click', () => startEditClass(row));
+    tr.querySelector('.duplicate-class-btn').addEventListener('click', () => duplicateClass(row));
+    tr.querySelector('.delete-class-btn').addEventListener('click', () => deleteClassScheduleEntry(row.rowId));
+    classScheduleTableBody.appendChild(tr);
+  });
+}
+
+// Switching the Semester field re-filters the table immediately - picking
+// an upcoming semester with nothing in it yet shows a fresh/empty table,
+// and picking back an older one shows that semester's schedule again.
+document.getElementById('cs-semester').addEventListener('change', renderClassScheduleTable);
+
 async function refreshClassSchedule() {
   const studentName = sessionStorage.getItem(STORAGE_KEY);
   try {
-    const rows = await api.getClassSchedule(studentName);
-    classScheduleTableBody.innerHTML = '';
-    rows.forEach((row) => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${row['Day'] || ''}</td>
-        <td>${row['Start Time'] || ''}</td>
-        <td>${row['End Time'] || ''}</td>
-        <td>${row['Semester'] || ''}</td>
-        <td>${row['Expected Grad'] || ''}</td>
-        <td class="row-actions">
-          <button type="button" class="edit-class-btn">Edit</button>
-          <button type="button" class="duplicate-class-btn">Duplicate</button>
-          <button type="button" class="delete-class-btn">Delete</button>
-        </td>
-      `;
-      tr.querySelector('.edit-class-btn').addEventListener('click', () => startEditClass(row));
-      tr.querySelector('.duplicate-class-btn').addEventListener('click', () => duplicateClass(row));
-      tr.querySelector('.delete-class-btn').addEventListener('click', () => deleteClassScheduleEntry(row.rowId));
-      classScheduleTableBody.appendChild(tr);
-    });
+    classScheduleRows = await api.getClassSchedule(studentName);
+    const semesterSelect = document.getElementById('cs-semester');
+    fillSemesterSelect(semesterSelect, semesterSelect.value || undefined);
+    renderClassScheduleTable();
   } catch (err) {
     showStatus(classScheduleStatus, `Could not load your unavailable schedule: ${err.message}`, 'error');
   }
@@ -178,25 +200,34 @@ function currentSemesterOptions() {
     .map((o) => o.label);
 }
 
-// Rebuilds the semester dropdown's options and selects selectedValue, or the
-// current term if none given. If selectedValue isn't one of the upcoming
-// options (e.g. editing an older entry from an already-passed semester),
-// it's added as an extra option so it displays correctly instead of
-// silently landing on the wrong semester.
+// Rebuilds the semester dropdown's options: the usual upcoming terms, plus
+// any semester that already has entries in classScheduleRows (even a past
+// one no longer "upcoming") so the student can always switch back to it to
+// view/edit that old schedule - see renderClassScheduleTable. selectedValue
+// is added too if it's neither (e.g. editing an entry from an already-passed
+// semester that happens to not be in classScheduleRows yet).
 function fillSemesterSelect(selectEl, selectedValue) {
-  const options = currentSemesterOptions();
+  const upcoming = currentSemesterOptions();
+  const historical = [...new Set(classScheduleRows.map((r) => r['Semester']).filter(Boolean))].filter(
+    (s) => !upcoming.includes(s)
+  );
+  const options = [...upcoming, ...historical];
   if (selectedValue && !options.includes(selectedValue)) options.unshift(selectedValue);
   selectEl.innerHTML = options.map((s) => `<option value="${s}">${s}</option>`).join('');
   selectEl.value = selectedValue || options[0];
 }
 
 function resetClassScheduleForm() {
+  // Deliberately leaves the Semester field alone - a student adding several
+  // classes in a row for the same (e.g. newly selected) semester shouldn't
+  // have it snap back to the current term after every single submission.
+  const keepSemester = document.getElementById('cs-semester').value;
   document.getElementById('cs-rowid').value = '';
   document.getElementById('class-schedule-form-title').textContent = 'My Unavailable Schedule';
   document.getElementById('cs-submit-btn').textContent = 'Submit';
   document.getElementById('cs-cancel-btn').hidden = true;
   classScheduleForm.reset();
-  fillSemesterSelect(document.getElementById('cs-semester'));
+  document.getElementById('cs-semester').value = keepSemester;
 }
 
 function startEditClass(row) {
